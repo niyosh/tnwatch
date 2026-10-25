@@ -15,7 +15,7 @@
   <link rel="icon" href="assets/icon.svg" type="image/svg+xml">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@500;600;700;800&family=Inter:wght@400;500;600;700&family=Noto+Sans+Tamil:wght@600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@500;600;700;800&family=Inter:wght@400;500;600;700&family=Noto+Sans+Tamil:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
   <link rel="stylesheet" href="css/style.css">
 </head>
@@ -31,24 +31,25 @@
         </svg>
         <span>
           <strong>TAMIL NADU <em>WATCH</em></strong>
-          <small>Facts · Transparency · A Better Tomorrow</small>
+          <small data-i18n="tagline">Facts · Transparency · A Better Tomorrow</small>
         </span>
       </a>
 
-      <button class="nav-toggle" aria-label="Open menu" aria-expanded="false"><i class="fa-solid fa-bars"></i></button>
+      <button class="nav-toggle" data-i18n-label="menuLabel" aria-label="Open menu" aria-expanded="false"><i class="fa-solid fa-bars"></i></button>
 
       <nav class="mainnav" id="mainnav">
-        <a class="active" href="#"><i class="fa-solid fa-house"></i>Home</a>
-        <a href="#crime"><i class="fa-solid fa-shield-halved"></i>Crime</a>
-        <a href="#corruption"><i class="fa-solid fa-handshake-slash"></i>Corruption</a>
-        <a href="#news"><i class="fa-solid fa-newspaper"></i>News</a>
-        <a href="#economy" id="navEconomy" hidden><i class="fa-solid fa-chart-column"></i>Economy</a>
-        <a href="#trend"><i class="fa-solid fa-chart-line"></i>Trends</a>
-        <a href="#sources"><i class="fa-solid fa-database"></i>Sources</a>
-        <a href="#opendata"><i class="fa-solid fa-download"></i>Open Data</a>
+        <a class="active" href="#"><i class="fa-solid fa-house"></i><span data-i18n="navHome">Home</span></a>
+        <a href="#crime"><i class="fa-solid fa-shield-halved"></i><span data-i18n="navCrime">Crime</span></a>
+        <a href="#corruption"><i class="fa-solid fa-handshake-slash"></i><span data-i18n="navCorruption">Corruption</span></a>
+        <a href="#news"><i class="fa-solid fa-newspaper"></i><span data-i18n="navNews">News</span></a>
+        <a href="#economy" id="navEconomy" hidden><i class="fa-solid fa-chart-column"></i><span data-i18n="navEconomy">Economy</span></a>
+        <a href="#trend"><i class="fa-solid fa-chart-line"></i><span data-i18n="navTrends">Trends</span></a>
+        <a href="#sources"><i class="fa-solid fa-database"></i><span data-i18n="navSources">Sources</span></a>
+        <a href="#opendata"><i class="fa-solid fa-download"></i><span data-i18n="navOpenData">Open Data</span></a>
       </nav>
 
-      <button class="icon-btn search-jump" aria-label="Search"><i class="fa-solid fa-magnifying-glass"></i></button>
+      <button class="lang-btn" id="langToggle" type="button" lang="ta" aria-label="தமிழில் படிக்க">தமிழ்</button>
+      <button class="icon-btn search-jump" data-i18n-label="searchLabel" aria-label="Search"><i class="fa-solid fa-magnifying-glass"></i></button>
     </div>
   </header>
 
@@ -70,22 +71,22 @@
 
     <div class="hero-inner">
       <div class="hero-text">
-        <h1>A Transparent<br><span>Tamil Nadu</span></h1>
-        <p class="lead">Real Data. Real Facts. Informed Citizens.</p>
+        <h1 data-i18n="heroTitle">A Transparent<br><span>Tamil Nadu</span></h1>
+        <p class="lead" data-i18n="heroLead">Real Data. Real Facts. Informed Citizens.</p>
         <p class="topics">
-          <a href="#crime">Crime</a><a href="#corruption">Corruption</a><a href="#news">News</a><a href="#sources">Public Sources</a>
+          <a href="#crime" data-i18n="topicCrime">Crime</a><a href="#corruption" data-i18n="topicCorruption">Corruption</a><a href="#news" data-i18n="topicNews">News</a><a href="#sources" data-i18n="topicSources">Public Sources</a>
         </p>
       </div>
       <blockquote class="hero-quote">
         <p lang="ta">“தெரிந்தால் தான்<br>மாற்றம் சாத்தியம்”</p>
-        <cite>— For a Safer, Fairer and<br>Stronger Tamil Nadu</cite>
+        <cite data-i18n="heroCite">— For a Safer, Fairer and<br>Stronger Tamil Nadu</cite>
       </blockquote>
     </div>
 
     <form class="searchbar" id="searchForm" role="search" autocomplete="off">
       <i class="fa-solid fa-magnifying-glass"></i>
-      <input id="searchInput" type="search" placeholder="Search crimes, districts, officials, news…" aria-label="Search">
-      <button type="submit">Search</button>
+      <input id="searchInput" type="search" placeholder="Search crimes, districts, officials, news…" data-i18n-ph="searchPh" data-i18n-label="searchLabel" aria-label="Search">
+      <button type="submit" data-i18n="searchBtn">Search</button>
       <div class="search-results" id="searchResults" hidden></div>
     </form>
 
@@ -94,7 +95,7 @@
 
   <div class="notice" id="notice">
     <i class="fa-solid fa-circle-info"></i>
-    <span>Every figure here is collected automatically from public sources. Daily, weekly and monthly counts are
+    <span data-i18n="notice">Every figure here is collected automatically from public sources. Daily, weekly and monthly counts are
     <strong>news reports</strong> found in public news feeds, not official police statistics. Official figures come from NCRB.
     <a href="#sources">See sources</a>.</span>
     <span class="updated" id="lastUpdated"></span>
@@ -108,24 +109,24 @@
       <div class="card-head">
         <span class="card-icon red"><i class="fa-solid fa-user-ninja"></i></span>
         <div>
-          <h2>Crime in Tamil Nadu</h2>
+          <h2 data-i18n="crimeTitle">Crime in Tamil Nadu</h2>
           <p id="crimeSub">News reports by type and district</p>
         </div>
         <div class="tabs" data-target="crime" role="tablist" aria-label="Crime period">
-          <button data-period="today">Today</button>
-          <button data-period="week">This Week</button>
-          <button data-period="month" class="on">This Month</button>
-          <button data-period="official">Official</button>
+          <button data-period="today" data-i18n="tabToday">Today</button>
+          <button data-period="week" data-i18n="tabWeek">This Week</button>
+          <button data-period="month" class="on" data-i18n="tabMonth">This Month</button>
+          <button data-period="official" data-i18n="tabOfficial">Official</button>
         </div>
       </div>
       <div class="crime-body">
         <div class="map-wrap">
           <div class="tile-map" id="tileMap"></div>
           <div class="legend">
-            <span><i class="lvx"></i>None</span><span><i class="lv0"></i>Low</span><span><i class="lv1"></i>Moderate</span>
-            <span><i class="lv2"></i>High</span><span><i class="lv3"></i>Very High</span>
+            <span><i class="lvx"></i><span data-i18n="lvNone">None</span></span><span><i class="lv0"></i><span data-i18n="lvLow">Low</span></span><span><i class="lv1"></i><span data-i18n="lvModerate">Moderate</span></span>
+            <span><i class="lv2"></i><span data-i18n="lvHigh">High</span></span><span><i class="lv3"></i><span data-i18n="lvVeryHigh">Very High</span></span>
           </div>
-          <p class="fine">Crime news reports per district, last 30 days. <b>Click a district</b> to see its stories.</p>
+          <p class="fine" data-i18n="mapNote">Crime news reports per district, last 30 days. <b>Click a district</b> to see its stories.</p>
         </div>
         <div id="crimeTableWrap"><table class="stat-table" id="crimeTable"></table></div>
       </div>
@@ -136,14 +137,14 @@
       <div class="card-head">
         <span class="card-icon amber"><i class="fa-solid fa-user-secret"></i></span>
         <div>
-          <h2>Corruption &amp; Misconduct</h2>
-          <p>News reports of bribery, raids and action against officials</p>
+          <h2 data-i18n="corrTitle">Corruption &amp; Misconduct</h2>
+          <p data-i18n="corrSub">News reports of bribery, raids and action against officials</p>
         </div>
       </div>
       <div class="tabs tabs-center" data-target="corruption" role="tablist" aria-label="Corruption period">
-        <button data-period="today">Today</button>
-        <button data-period="week">This Week</button>
-        <button data-period="month" class="on">This Month</button>
+        <button data-period="today" data-i18n="tabToday">Today</button>
+        <button data-period="week" data-i18n="tabWeek">This Week</button>
+        <button data-period="month" class="on" data-i18n="tabMonth">This Month</button>
       </div>
       <table class="stat-table roomy" id="corruptionTable"></table>
     </section>
@@ -153,8 +154,8 @@
       <div class="card-head">
         <span class="card-icon blue"><i class="fa-solid fa-newspaper"></i></span>
         <div>
-          <h2>Latest News &amp; Updates</h2>
-          <p>Crime, corruption and development</p>
+          <h2 data-i18n="newsTitle">Latest News &amp; Updates</h2>
+          <p data-i18n="newsSub">Crime, corruption and development</p>
         </div>
       </div>
       <ul class="news-list" id="newsList"></ul>
@@ -165,8 +166,8 @@
       <div class="card-head">
         <span class="card-icon purple"><i class="fa-solid fa-chart-line"></i></span>
         <div>
-          <h2>30-Day Trend</h2>
-          <p>News reports per day</p>
+          <h2 data-i18n="trendTitle">30-Day Trend</h2>
+          <p data-i18n="trendSub">News reports per day</p>
         </div>
       </div>
       <div class="chart-box tall"><canvas id="trendChart" aria-label="Crime and corruption news reports per day, last 30 days" role="img"></canvas></div>
@@ -178,16 +179,16 @@
       <div class="card-head">
         <span class="card-icon red"><i class="fa-solid fa-handcuffs"></i></span>
         <div>
-          <h2>Latest Crime Reports</h2>
+          <h2 data-i18n="crimeNewsTitle">Latest Crime Reports</h2>
           <p id="crimeNewsSub">Most recent crime stories with district</p>
         </div>
       </div>
       <div class="filter-row">
-        <select id="districtFilter" aria-label="Filter by district"><option value="">All districts</option></select>
-        <select id="typeFilter" aria-label="Filter by crime type"><option value="">All types</option></select>
+        <select id="districtFilter" data-i18n-label="districtLabel" aria-label="Filter by district"><option value="" data-i18n="allDistricts">All districts</option></select>
+        <select id="typeFilter" data-i18n-label="typeLabel" aria-label="Filter by crime type"><option value="" data-i18n="allTypes">All types</option></select>
       </div>
       <ul class="headline-list" id="crimeHeadlines"></ul>
-      <button class="more-btn" id="crimeMore" hidden>Show more</button>
+      <button class="more-btn" id="crimeMore" hidden data-i18n="showMore">Show more</button>
     </section>
 
     <!-- Latest corruption headlines -->
@@ -195,8 +196,8 @@
       <div class="card-head">
         <span class="card-icon amber"><i class="fa-solid fa-scale-unbalanced"></i></span>
         <div>
-          <h2>Latest Corruption Reports</h2>
-          <p>Most recent vigilance and bribery stories</p>
+          <h2 data-i18n="corrNewsTitle">Latest Corruption Reports</h2>
+          <p data-i18n="corrNewsSub">Most recent vigilance and bribery stories</p>
         </div>
       </div>
       <ul class="headline-list" id="corruptionHeadlines"></ul>
@@ -207,12 +208,12 @@
       <div class="card-head">
         <span class="card-icon teal"><i class="fa-solid fa-database"></i></span>
         <div>
-          <h2>Sources &amp; Update Status</h2>
-          <p>Where every number comes from</p>
+          <h2 data-i18n="sourcesTitle">Sources &amp; Update Status</h2>
+          <p data-i18n="sourcesSub">Where every number comes from</p>
         </div>
       </div>
       <ul class="source-list" id="sourceList"></ul>
-      <p class="fine">News reports are de-duplicated by headline, but one incident can still be covered by several outlets,
+      <p class="fine" data-i18n="sourcesNote">News reports are de-duplicated by headline, but one incident can still be covered by several outlets,
         and many crimes are never reported in the news. Treat these counts as indicators, not official totals.</p>
     </section>
 
@@ -221,21 +222,21 @@
       <div class="card-head">
         <span class="card-icon green"><i class="fa-solid fa-download"></i></span>
         <div>
-          <h2>Open Data</h2>
-          <p>Free to download, check and reuse</p>
+          <h2 data-i18n="openTitle">Open Data</h2>
+          <p data-i18n="openSub">Free to download, check and reuse</p>
         </div>
       </div>
       <div class="downloads">
-        <a class="dl" href="data/stories.csv" download><i class="fa-solid fa-file-csv"></i><span><b>All stories (CSV)</b><small>Every story counted in the last 70 days, with category, district and link. Opens in Excel.</small></span></a>
-        <a class="dl" href="data/auto.json" download><i class="fa-solid fa-file-code"></i><span><b>Dashboard data (JSON)</b><small>All numbers shown on this page.</small></span></a>
-        <a class="dl" href="https://github.com/niyosh/tnwatch" target="_blank" rel="noopener"><i class="fa-brands fa-github"></i><span><b>Source code &amp; method</b><small>How stories are found, classified and counted.</small></span></a>
+        <a class="dl" href="data/stories.csv" download><i class="fa-solid fa-file-csv"></i><span><b data-i18n="dlCsvTitle">All stories (CSV)</b><small data-i18n="dlCsvSub">Every story counted in the last 70 days, with category, district and link. Opens in Excel.</small></span></a>
+        <a class="dl" href="data/auto.json" download><i class="fa-solid fa-file-code"></i><span><b data-i18n="dlJsonTitle">Dashboard data (JSON)</b><small data-i18n="dlJsonSub">All numbers shown on this page.</small></span></a>
+        <a class="dl" href="https://github.com/niyosh/tnwatch" target="_blank" rel="noopener"><i class="fa-brands fa-github"></i><span><b data-i18n="dlCodeTitle">Source code &amp; method</b><small data-i18n="dlCodeSub">How stories are found, classified and counted.</small></span></a>
       </div>
-      <h3 class="mini">How counting works</h3>
+      <h3 class="mini" data-i18n="methodTitle">How counting works</h3>
       <ul class="method">
-        <li>Stories come from public news feeds every morning at 6:00 IST.</li>
-        <li>Headlines are sorted into crime types and districts by keywords.</li>
-        <li>The same incident covered by several outlets is counted once.</li>
-        <li>Official yearly totals come from NCRB via data.gov.in.</li>
+        <li data-i18n="method1">Stories come from public news feeds every morning at 6:00 IST.</li>
+        <li data-i18n="method2">Headlines are sorted into crime types and districts by keywords.</li>
+        <li data-i18n="method3">The same incident covered by several outlets is counted once.</li>
+        <li data-i18n="method4">Official yearly totals come from NCRB via data.gov.in.</li>
       </ul>
     </section>
 
@@ -244,7 +245,7 @@
       <div class="card-head">
         <span class="card-icon purple"><i class="fa-solid fa-chart-column"></i></span>
         <div>
-          <h2>Tamil Nadu GDP &amp; Economy</h2>
+          <h2 data-i18n="econTitle">Tamil Nadu GDP &amp; Economy</h2>
           <p id="economySub">Gross State Domestic Product</p>
         </div>
       </div>
@@ -254,11 +255,12 @@
   </main>
 
   <footer class="footer" id="about">
-    <div><strong>Tamil Nadu Watch</strong> — an independent citizen dashboard built only from public sources. Every story links to its original publisher.</div>
+    <div data-i18n="footer"><strong>Tamil Nadu Watch</strong> — an independent citizen dashboard built only from public sources. Every story links to its original publisher.</div>
   </footer>
 
   <script defer src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
   <script defer src="data/auto.js"></script>
+  <script defer src="js/i18n.js"></script>
   <script defer src="js/app.js"></script>
 </body>
 </html>

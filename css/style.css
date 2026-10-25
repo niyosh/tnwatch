@@ -405,3 +405,47 @@ a.news-title:hover { color: var(--brand); }
   .card.span2 { grid-column: auto; }
   .chart-box.tall { height: 220px; }
 }
+
+/* ================= LANGUAGE ================= */
+.lang-btn {
+  flex-shrink: 0; border: 1px solid rgba(255,255,255,.28); background: rgba(255,255,255,.06); color: #fff;
+  font: 600 13px "Noto Sans Tamil", Inter, sans-serif; padding: 7px 12px; border-radius: 8px; cursor: pointer;
+}
+.lang-btn:hover { background: rgba(255,255,255,.14); }
+.lang-btn:focus-visible { outline: 2px solid var(--brand-2); outline-offset: 2px; }
+
+/* Tamil script: matching font and room for longer words */
+html[lang="ta"] body { font-family: "Noto Sans Tamil", Inter, system-ui, sans-serif; }
+html[lang="ta"] h1, html[lang="ta"] h2, html[lang="ta"] h3,
+html[lang="ta"] .stat .val, html[lang="ta"] .hl b { font-family: "Noto Sans Tamil", Poppins, sans-serif; }
+html[lang="ta"] .hero h1 { font-size: clamp(32px, 4.4vw, 58px); line-height: 1.2; }
+html[lang="ta"] .hero .lead { font-size: clamp(15px, 1.5vw, 20px); }
+html[lang="ta"] .card-head h2 { font-size: 15.5px; line-height: 1.4; }
+html[lang="ta"] .mainnav a { font-size: 12.5px; padding: 10px 10px; }
+html[lang="ta"] .tabs button { font-size: 11.5px; padding: 6px 8px; }
+html[lang="ta"] .stat .lbl { font-size: 12px; }
+@media (max-width: 1500px) {
+  html[lang="ta"] .mainnav a i { display: none; }
+}
+.brand, .brand > span { min-width: 0; }
+.brand small { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+@media (max-width: 760px) {
+  .lang-btn { padding: 6px 9px; font-size: 12px; }
+  .topbar-inner { gap: 8px; }
+  html[lang="ta"] .stat .lbl { font-size: 11.5px; }
+}
+@media (max-width: 420px) {
+  .brand small { display: none; }
+}
+.tabs { max-width: 100%; overflow-x: auto; scrollbar-width: none; }
+/* Tamil menu labels are longer: use the compact menu earlier */
+@media (max-width: 1440px) {
+  html[lang="ta"] .nav-toggle { display: block; }
+  html[lang="ta"] .mainnav {
+    display: none; position: absolute; top: 100%; left: 0; right: 0;
+    flex-direction: column; background: var(--navy); padding: 8px 16px 16px;
+    border-bottom: 1px solid rgba(255,255,255,.08);
+  }
+  html[lang="ta"] .mainnav.open { display: flex; }
+  html[lang="ta"] .mainnav a i { display: inline-block; width: 18px; }
+}

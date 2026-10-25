@@ -46,3 +46,8 @@ The dataset must have one row per state and one column per year.
 
 ## Hero image
 Save a wide photo as `assets/hero.jpg` (e.g. 1920×800). Without it a drawn skyline is shown.
+
+## Languages (English / தமிழ்)
+The button in the header switches the interface between English and Tamil. All interface text lives in `js/i18n.js`
+(page text is marked with `data-i18n` in `index.html`). Links can force a language: `?lang=ta` or `?lang=en`.
+News headlines stay in the language they were published in.
