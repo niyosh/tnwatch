@@ -1,5 +1,5 @@
 {
- "generatedAt": "2026-10-25T21:40+05:30",
+ "generatedAt": "2026-10-25T21:42+05:30",
  "crime": {
   "periods": {
    "today": [
@@ -2212,7 +2212,7 @@
     "types": [
      "Women Safety"
     ],
-    "outlets": 1
+    "outlets": 2
    },
    {
     "title": "Tamil Nadu education trainer arrested under POCSO for alleged sexual harassment of minor",
@@ -3856,7 +3856,7 @@
    "name": "Google News RSS (news reports)",
    "url": "https://news.google.com/",
    "status": "ok",
-   "detail": "49 feeds read, 0 failed, 0 new articles"
+   "detail": "49 feeds read, 0 failed, 1 new articles"
   },
   {
    "name": "NCRB Crime in India – IPC crimes, Tamil Nadu",
