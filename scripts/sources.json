@@ -1,0 +1,23 @@
+{
+  "_help": "Official datasets from data.gov.in. Each one needs the resource id shown in the dataset's API tab. Rows are matched on 'Tamil Nadu' and every column whose name contains a year becomes a data point. 'divide' converts the unit (e.g. 100000 turns Rs crore into Rs lakh crore). Leave 'resource' empty to switch a source off.",
+  "datagov": [
+    {
+      "id": "ncrb_ipc",
+      "use": "crime_official",
+      "name": "NCRB Crime in India – IPC crimes, Tamil Nadu",
+      "resource": "15150682-a9ed-475d-b0e3-67b292e90d22",
+      "page": "https://www.data.gov.in/resource/stateut-wise-number-indian-penal-code-ipc-crimes-2020-2022",
+      "unit": "cases",
+      "divide": 1
+    },
+    {
+      "id": "gsdp",
+      "use": "economy",
+      "name": "Gross State Domestic Product, Tamil Nadu",
+      "resource": "",
+      "page": "",
+      "unit": "₹ Lakh Cr",
+      "divide": 100000
+    }
+  ]
+}

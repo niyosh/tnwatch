@@ -1,0 +1,213 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Tamil Nadu Watch</title>
+  <meta name="description" content="Crime, corruption and economy in Tamil Nadu, updated daily from public sources.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@500;600;700;800&family=Inter:wght@400;500;600;700&family=Noto+Sans+Tamil:wght@600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+  <!-- ================= HEADER ================= -->
+  <header class="topbar">
+    <div class="topbar-inner">
+      <a class="brand" href="#">
+        <svg class="brand-logo" viewBox="0 0 48 56" aria-hidden="true">
+          <path d="M24 2l2 4h-4zM18 8h12l1 5H17zM15 15h18l1.5 6h-21zM12 23h24l2 7H10zM9 32h30l2 8H7zM5 42h38v12H5z" fill="currentColor"/>
+          <path d="M20 46h8v8h-8z" fill="#0b1426"/>
+        </svg>
+        <span>
+          <strong>TAMIL NADU <em>WATCH</em></strong>
+          <small>Facts · Transparency · A Better Tomorrow</small>
+        </span>
+      </a>
+
+      <button class="nav-toggle" aria-label="Open menu" aria-expanded="false"><i class="fa-solid fa-bars"></i></button>
+
+      <nav class="mainnav" id="mainnav">
+        <a class="active" href="#"><i class="fa-solid fa-house"></i>Home</a>
+        <a href="#crime"><i class="fa-solid fa-shield-halved"></i>Crime</a>
+        <a href="#corruption"><i class="fa-solid fa-handshake-slash"></i>Corruption</a>
+        <a href="#news"><i class="fa-solid fa-newspaper"></i>News</a>
+        <a href="#economy" id="navEconomy" hidden><i class="fa-solid fa-chart-column"></i>Economy</a>
+        <a href="#sources"><i class="fa-solid fa-database"></i>Sources</a>
+      </nav>
+
+      <button class="icon-btn search-jump" aria-label="Search"><i class="fa-solid fa-magnifying-glass"></i></button>
+    </div>
+  </header>
+
+  <!-- ================= HERO ================= -->
+  <section class="hero" id="hero">
+    <!-- Fallback skyline drawn when assets/hero.jpg is missing -->
+    <svg class="skyline" viewBox="0 0 1440 300" preserveAspectRatio="xMidYMax slice" aria-hidden="true">
+      <path d="M0 300V210h40v-30h30v40h50v-60h20v-20h20v20h20v60h40v-40h30v-30h30v30h20v50h40V170h15v-15h20v15h15v60h50v-40h30v20h40v-90h10v-20h10v20h10v90h40v50h60
+               L760 40l8 0 4-20 4 20 8 0L830 230h30v-50h40v-30h20v30h30v60h50v-40h30v-70h20v70h40v40h40v-30h40v30h50v-60h10V90h8l6-30 6 30h8v40h10v100h60v-20h40v90z"
+            fill="#0d1a33" opacity=".92"/>
+      <path d="M760 40l-50 190h176L836 40z" fill="#13213d"/>
+      <g fill="#1b2c4f">
+        <rect x="738" y="80" width="80" height="10"/><rect x="730" y="110" width="96" height="10"/>
+        <rect x="722" y="140" width="112" height="10"/><rect x="714" y="170" width="128" height="10"/>
+        <rect x="706" y="200" width="144" height="10"/>
+      </g>
+    </svg>
+    <div class="hero-overlay"></div>
+
+    <div class="hero-inner">
+      <div class="hero-text">
+        <h1>A Transparent<br><span>Tamil Nadu</span></h1>
+        <p class="lead">Real Data. Real Facts. Informed Citizens.</p>
+        <p class="topics">
+          <a href="#crime">Crime</a><a href="#corruption">Corruption</a><a href="#news">News</a><a href="#sources">Public Sources</a>
+        </p>
+      </div>
+      <blockquote class="hero-quote">
+        <p lang="ta">“தெரிந்தால் தான்<br>மாற்றம் சாத்தியம்”</p>
+        <cite>— For a Safer, Fairer and<br>Stronger Tamil Nadu</cite>
+      </blockquote>
+    </div>
+
+    <form class="searchbar" id="searchForm" role="search" autocomplete="off">
+      <i class="fa-solid fa-magnifying-glass"></i>
+      <input id="searchInput" type="search" placeholder="Search crimes, districts, officials, news…" aria-label="Search">
+      <button type="submit">Search</button>
+      <div class="search-results" id="searchResults" hidden></div>
+    </form>
+
+    <div class="stats" id="stats"></div>
+  </section>
+
+  <div class="notice" id="notice">
+    <i class="fa-solid fa-circle-info"></i>
+    <span>Every figure here is collected automatically from public sources. Daily, weekly and monthly counts are
+    <strong>news reports</strong> found in public news feeds, not official police statistics. Official figures come from NCRB.
+    <a href="#sources">See sources</a>.</span>
+    <span class="updated" id="lastUpdated"></span>
+  </div>
+
+  <!-- ================= DASHBOARD GRID ================= -->
+  <main class="grid">
+
+    <!-- Crime -->
+    <section class="card" id="crime">
+      <div class="card-head">
+        <span class="card-icon red"><i class="fa-solid fa-user-ninja"></i></span>
+        <div>
+          <h2>Crime in Tamil Nadu</h2>
+          <p id="crimeSub">News reports by type and district</p>
+        </div>
+        <div class="tabs" data-target="crime">
+          <button data-period="today">Today</button>
+          <button data-period="week">This Week</button>
+          <button data-period="month" class="on">This Month</button>
+          <button data-period="official">Official</button>
+        </div>
+      </div>
+      <div class="crime-body">
+        <div class="map-wrap">
+          <div class="tile-map" id="tileMap"></div>
+          <div class="legend">
+            <span><i class="lvx"></i>None</span><span><i class="lv0"></i>Low</span><span><i class="lv1"></i>Moderate</span>
+            <span><i class="lv2"></i>High</span><span><i class="lv3"></i>Very High</span>
+          </div>
+          <p class="fine">Map: crime news reports per district, last 30 days.</p>
+        </div>
+        <div id="crimeTableWrap"><table class="stat-table" id="crimeTable"></table></div>
+      </div>
+    </section>
+
+    <!-- Corruption -->
+    <section class="card" id="corruption">
+      <div class="card-head">
+        <span class="card-icon amber"><i class="fa-solid fa-user-secret"></i></span>
+        <div>
+          <h2>Corruption &amp; Misconduct</h2>
+          <p>News reports of bribery, raids and action against officials</p>
+        </div>
+      </div>
+      <div class="tabs tabs-center" data-target="corruption">
+        <button data-period="today">Today</button>
+        <button data-period="week">This Week</button>
+        <button data-period="month" class="on">This Month</button>
+      </div>
+      <table class="stat-table roomy" id="corruptionTable"></table>
+    </section>
+
+    <!-- News -->
+    <section class="card" id="news">
+      <div class="card-head">
+        <span class="card-icon blue"><i class="fa-solid fa-newspaper"></i></span>
+        <div>
+          <h2>Latest News &amp; Updates</h2>
+          <p>Crime, corruption and development</p>
+        </div>
+      </div>
+      <ul class="news-list" id="newsList"></ul>
+    </section>
+
+    <!-- Latest crime headlines -->
+    <section class="card" id="crimeNews">
+      <div class="card-head">
+        <span class="card-icon red"><i class="fa-solid fa-handcuffs"></i></span>
+        <div>
+          <h2>Latest Crime Reports</h2>
+          <p>Most recent crime stories with district</p>
+        </div>
+      </div>
+      <ul class="headline-list" id="crimeHeadlines"></ul>
+    </section>
+
+    <!-- Latest corruption headlines -->
+    <section class="card" id="corruptionNews">
+      <div class="card-head">
+        <span class="card-icon amber"><i class="fa-solid fa-scale-unbalanced"></i></span>
+        <div>
+          <h2>Latest Corruption Reports</h2>
+          <p>Most recent vigilance and bribery stories</p>
+        </div>
+      </div>
+      <ul class="headline-list" id="corruptionHeadlines"></ul>
+    </section>
+
+    <!-- Sources -->
+    <section class="card" id="sources">
+      <div class="card-head">
+        <span class="card-icon teal"><i class="fa-solid fa-database"></i></span>
+        <div>
+          <h2>Sources &amp; Update Status</h2>
+          <p>Where every number comes from</p>
+        </div>
+      </div>
+      <ul class="source-list" id="sourceList"></ul>
+      <p class="fine">News reports are de-duplicated by headline, but one incident can still be covered by several outlets,
+        and many crimes are never reported in the news. Treat these counts as indicators, not official totals.</p>
+    </section>
+
+    <!-- Economy (shown only when an official GSDP source is connected) -->
+    <section class="card wide" id="economy" hidden>
+      <div class="card-head">
+        <span class="card-icon purple"><i class="fa-solid fa-chart-column"></i></span>
+        <div>
+          <h2>Tamil Nadu GDP &amp; Economy</h2>
+          <p id="economySub">Gross State Domestic Product</p>
+        </div>
+      </div>
+      <div class="chart-box"><canvas id="gdpChart" aria-label="GSDP and growth rate by year" role="img"></canvas></div>
+      <div class="highlights" id="highlights"></div>
+    </section>
+  </main>
+
+  <footer class="footer" id="about">
+    <div><strong>Tamil Nadu Watch</strong> — an independent citizen dashboard built only from public sources. Every story links to its original publisher.</div>
+  </footer>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+  <script src="data/auto.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
