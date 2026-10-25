@@ -19,8 +19,11 @@ Changes (↑ / ↓ %) only appear once the script has run daily long enough to c
 ```
 python scripts/fetch_data.py
 ```
-This writes `data/auto.js` (what the page shows) and `data/history.json` (stored stories used for weekly and monthly counts).
-Don't edit either file by hand.
+This writes `data/auto.js` (what the page shows), `data/history.json` (stored stories used for weekly and monthly counts),
+and the public downloads `data/auto.json` and `data/stories.csv`. Don't edit these files by hand.
+
+The same incident reported by several outlets is counted once: headlines in the same category, within 2 days,
+that share at least half of their meaningful words are merged (the CSV's `outlets` column shows how many were merged).
 
 ## Running it every day automatically (free)
 1. Put this folder in a GitHub repository.

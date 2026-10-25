@@ -4,7 +4,15 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Tamil Nadu Watch</title>
-  <meta name="description" content="Crime, corruption and economy in Tamil Nadu, updated daily from public sources.">
+  <meta name="description" content="Crime, corruption and news in Tamil Nadu, updated every day from public sources.">
+  <meta name="theme-color" content="#0b1426">
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="Tamil Nadu Watch — Real Data. Real Facts.">
+  <meta property="og:description" content="Daily dashboard of crime, corruption and news across Tamil Nadu's 38 districts, built only from public sources.">
+  <meta property="og:url" content="https://niyosh.github.io/tnwatch/">
+  <meta property="og:image" content="https://niyosh.github.io/tnwatch/assets/og.png">
+  <meta name="twitter:card" content="summary_large_image">
+  <link rel="icon" href="assets/icon.svg" type="image/svg+xml">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@500;600;700;800&family=Inter:wght@400;500;600;700&family=Noto+Sans+Tamil:wght@600;700&display=swap" rel="stylesheet">
@@ -35,7 +43,9 @@
         <a href="#corruption"><i class="fa-solid fa-handshake-slash"></i>Corruption</a>
         <a href="#news"><i class="fa-solid fa-newspaper"></i>News</a>
         <a href="#economy" id="navEconomy" hidden><i class="fa-solid fa-chart-column"></i>Economy</a>
+        <a href="#trend"><i class="fa-solid fa-chart-line"></i>Trends</a>
         <a href="#sources"><i class="fa-solid fa-database"></i>Sources</a>
+        <a href="#opendata"><i class="fa-solid fa-download"></i>Open Data</a>
       </nav>
 
       <button class="icon-btn search-jump" aria-label="Search"><i class="fa-solid fa-magnifying-glass"></i></button>
@@ -101,7 +111,7 @@
           <h2>Crime in Tamil Nadu</h2>
           <p id="crimeSub">News reports by type and district</p>
         </div>
-        <div class="tabs" data-target="crime">
+        <div class="tabs" data-target="crime" role="tablist" aria-label="Crime period">
           <button data-period="today">Today</button>
           <button data-period="week">This Week</button>
           <button data-period="month" class="on">This Month</button>
@@ -115,7 +125,7 @@
             <span><i class="lvx"></i>None</span><span><i class="lv0"></i>Low</span><span><i class="lv1"></i>Moderate</span>
             <span><i class="lv2"></i>High</span><span><i class="lv3"></i>Very High</span>
           </div>
-          <p class="fine">Map: crime news reports per district, last 30 days.</p>
+          <p class="fine">Crime news reports per district, last 30 days. <b>Click a district</b> to see its stories.</p>
         </div>
         <div id="crimeTableWrap"><table class="stat-table" id="crimeTable"></table></div>
       </div>
@@ -130,7 +140,7 @@
           <p>News reports of bribery, raids and action against officials</p>
         </div>
       </div>
-      <div class="tabs tabs-center" data-target="corruption">
+      <div class="tabs tabs-center" data-target="corruption" role="tablist" aria-label="Corruption period">
         <button data-period="today">Today</button>
         <button data-period="week">This Week</button>
         <button data-period="month" class="on">This Month</button>
@@ -150,16 +160,34 @@
       <ul class="news-list" id="newsList"></ul>
     </section>
 
-    <!-- Latest crime headlines -->
+    <!-- 30-day trend -->
+    <section class="card span2" id="trend">
+      <div class="card-head">
+        <span class="card-icon purple"><i class="fa-solid fa-chart-line"></i></span>
+        <div>
+          <h2>30-Day Trend</h2>
+          <p>News reports per day</p>
+        </div>
+      </div>
+      <div class="chart-box tall"><canvas id="trendChart" aria-label="Crime and corruption news reports per day, last 30 days" role="img"></canvas></div>
+      <p class="fine" id="trendNote"></p>
+    </section>
+
+    <!-- Latest crime headlines (filterable by district) -->
     <section class="card" id="crimeNews">
       <div class="card-head">
         <span class="card-icon red"><i class="fa-solid fa-handcuffs"></i></span>
         <div>
           <h2>Latest Crime Reports</h2>
-          <p>Most recent crime stories with district</p>
+          <p id="crimeNewsSub">Most recent crime stories with district</p>
         </div>
       </div>
+      <div class="filter-row">
+        <select id="districtFilter" aria-label="Filter by district"><option value="">All districts</option></select>
+        <select id="typeFilter" aria-label="Filter by crime type"><option value="">All types</option></select>
+      </div>
       <ul class="headline-list" id="crimeHeadlines"></ul>
+      <button class="more-btn" id="crimeMore" hidden>Show more</button>
     </section>
 
     <!-- Latest corruption headlines -->
@@ -188,6 +216,29 @@
         and many crimes are never reported in the news. Treat these counts as indicators, not official totals.</p>
     </section>
 
+    <!-- Open data -->
+    <section class="card" id="opendata">
+      <div class="card-head">
+        <span class="card-icon green"><i class="fa-solid fa-download"></i></span>
+        <div>
+          <h2>Open Data</h2>
+          <p>Free to download, check and reuse</p>
+        </div>
+      </div>
+      <div class="downloads">
+        <a class="dl" href="data/stories.csv" download><i class="fa-solid fa-file-csv"></i><span><b>All stories (CSV)</b><small>Every story counted in the last 70 days, with category, district and link. Opens in Excel.</small></span></a>
+        <a class="dl" href="data/auto.json" download><i class="fa-solid fa-file-code"></i><span><b>Dashboard data (JSON)</b><small>All numbers shown on this page.</small></span></a>
+        <a class="dl" href="https://github.com/niyosh/tnwatch" target="_blank" rel="noopener"><i class="fa-brands fa-github"></i><span><b>Source code &amp; method</b><small>How stories are found, classified and counted.</small></span></a>
+      </div>
+      <h3 class="mini">How counting works</h3>
+      <ul class="method">
+        <li>Stories come from public news feeds every morning at 6:00 IST.</li>
+        <li>Headlines are sorted into crime types and districts by keywords.</li>
+        <li>The same incident covered by several outlets is counted once.</li>
+        <li>Official yearly totals come from NCRB via data.gov.in.</li>
+      </ul>
+    </section>
+
     <!-- Economy (shown only when an official GSDP source is connected) -->
     <section class="card wide" id="economy" hidden>
       <div class="card-head">
@@ -206,8 +257,8 @@
     <div><strong>Tamil Nadu Watch</strong> — an independent citizen dashboard built only from public sources. Every story links to its original publisher.</div>
   </footer>
 
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
-  <script src="data/auto.js"></script>
-  <script src="js/app.js"></script>
+  <script defer src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+  <script defer src="data/auto.js"></script>
+  <script defer src="js/app.js"></script>
 </body>
 </html>

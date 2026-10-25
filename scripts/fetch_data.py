@@ -8,6 +8,7 @@ Run once a day:  python scripts/fetch_data.py
 Uses only the Python standard library.
 """
 
+import csv
 import json
 import os
 import re
@@ -134,6 +135,46 @@ def norm_key(title):
     return re.sub(r"[^a-z0-9 ]", "", title.lower())[:80]
 
 
+STOPWORDS = set("""the a an in of for to on at by with and or from as is are was were be been after over into near
+    his her their its this that who what how why case cases police tamil nadu district city said says new two three
+    four five one man men woman women youth held arrested booked""".split())
+
+
+def tokens(title):
+    return {w for w in re.findall(r"[a-z0-9]+", title.lower()) if len(w) > 2 and w not in STOPWORDS}
+
+
+def dedupe(history):
+    """Merge stories that are the same incident reported by different outlets.
+
+    Two headlines in the same category, within 2 days, sharing at least half of their
+    meaningful words are treated as one story (the earliest one is kept)."""
+    arts = history.get("articles", {})
+    kept = []  # (key, article, tokens, day)
+    removed = 0
+    for key, a in sorted(arts.items(), key=lambda kv: kv[1]["ts"]):
+        tk = tokens(a["title"])
+        day = datetime.fromisoformat(a["date"]).toordinal()
+        dup = None
+        if len(tk) >= 3:
+            for k2, a2, tk2, day2 in reversed(kept):
+                if day - day2 > 2:
+                    break
+                if a2["cat"] == a["cat"] and len(tk2) >= 3 and len(tk & tk2) / len(tk | tk2) >= 0.5:
+                    dup = a2
+                    break
+        if dup:
+            dup["types"] = sorted(set(dup["types"]) | set(a["types"]))
+            dup["district"] = dup["district"] or a["district"]
+            dup["also"] = dup.get("also", 1) + 1
+            history.setdefault("merged", {})[key] = a["date"]
+            del arts[key]
+            removed += 1
+        else:
+            kept.append((key, a, tk, day))
+    return removed
+
+
 def match_any(text, words):
     t = text.lower()
     return any(w in t for w in words)
@@ -187,7 +228,7 @@ def fetch_news(history, status):
             except Exception:
                 continue
             key = norm_key(title)
-            if not key:
+            if not key or key in history.get("merged", {}):
                 continue
             result = classify(bucket, hint, title)
             if not result:
@@ -221,6 +262,9 @@ def prune(history, today):
     arts = history.get("articles", {})
     for k in [k for k, a in arts.items() if a["date"] < cutoff]:
         del arts[k]
+    merged = history.get("merged", {})
+    for k in [k for k, d in merged.items() if d < cutoff]:
+        del merged[k]
     history.setdefault("since", today.strftime("%Y-%m-%d"))
 
 
@@ -315,6 +359,7 @@ def main():
     print("Fetching data.gov.in datasets…")
     fetch_datagov(history, status)
     prune(history, today)
+    print(f"Merged {dedupe(history)} duplicate stories")
 
     arts = sorted(history["articles"].values(), key=lambda a: a["ts"], reverse=True)
     month_start = (today - timedelta(days=29)).strftime("%Y-%m-%d")
@@ -333,6 +378,20 @@ def main():
         tag = {"crime": "Crime", "corruption": "Corruption"}.get(a["cat"], a["types"][0])
         news.append({"title": a["title"], "url": a["url"], "source": a["source"], "date": a["date"], "tag": tag})
 
+    since = history.get("since", today.strftime("%Y-%m-%d"))
+
+    def daily(cat):
+        days = [(today - timedelta(days=i)).strftime("%Y-%m-%d") for i in range(29, -1, -1)]
+        counts = {d: 0 for d in days}
+        for a in arts:
+            if a["cat"] == cat and a["date"] in counts:
+                counts[a["date"]] += 1
+        # days before the script started running daily are under-sampled by the feeds
+        return [{"date": d, "count": counts[d], "partial": d < since} for d in days]
+
+    recent_crime = [{k: a.get(k) for k in ("title", "url", "source", "date", "district")} | {"tag": a["types"][0], "types": a["types"], "outlets": a.get("also", 1)}
+                    for a in arts if a["cat"] == "crime" and a["date"] >= month_start]
+
     official = history.get("official", {})
     out = {
         "generatedAt": now.isoformat(timespec="minutes"),
@@ -340,12 +399,15 @@ def main():
             "periods": build_periods(history, "crime", list(CRIME_TYPES), CRIME_ICONS, today),
             "districts": districts,
             "latest": latest("crime", 6),
+            "recent": recent_crime[:500],
+            "daily": daily("crime"),
             "official": next((v for v in official.values() if v["use"] == "crime_official"), None),
         },
         "corruption": {
             "periods": build_periods(history, "corruption", list(CORRUPTION_TYPES) + ["Other Corruption News"],
                                      CORRUPTION_ICONS, today),
             "latest": latest("corruption", 6),
+            "daily": daily("corruption"),
         },
         "news": news[:8],
         "economy": next((v for v in official.values() if v["use"] == "economy"), None),
@@ -359,6 +421,15 @@ def main():
         f.write("window.AUTO_DATA = ")
         json.dump(out, f, ensure_ascii=False, indent=1)
         f.write(";\n")
+
+    # Open data downloads
+    with open(os.path.join(ROOT, "data", "auto.json"), "w", encoding="utf-8") as f:
+        json.dump(out, f, ensure_ascii=False, indent=1)
+    with open(os.path.join(ROOT, "data", "stories.csv"), "w", encoding="utf-8-sig", newline="") as f:
+        w = csv.writer(f)
+        w.writerow(["date", "category", "types", "district", "title", "source", "url", "outlets"])
+        for a in arts:
+            w.writerow([a["date"], a["cat"], "; ".join(a["types"]), a["district"] or "", a["title"], a["source"], a["url"], a.get("also", 1)])
 
     month = out["crime"]["periods"]["month"]
     print(f"Done. {len(arts)} stored articles; crime reports (30d): {sum(r['count'] for r in month)}; "

@@ -121,12 +121,20 @@
   };
   document.querySelectorAll(".tabs").forEach((tabs) => {
     const render = tables[tabs.dataset.target];
+    const buttons = tabs.querySelectorAll("button");
+    const select = (btn) => {
+      buttons.forEach((b) => {
+        b.classList.toggle("on", b === btn);
+        b.setAttribute("aria-selected", b === btn);
+      });
+      render(btn.dataset.period);
+    };
+    buttons.forEach((b) => b.setAttribute("role", "tab"));
     tabs.addEventListener("click", (e) => {
       const btn = e.target.closest("button");
-      if (!btn) return;
-      tabs.querySelectorAll("button").forEach((b) => b.classList.toggle("on", b === btn));
-      render(btn.dataset.period);
+      if (btn) select(btn);
     });
+    buttons.forEach((b) => b.setAttribute("aria-selected", b.classList.contains("on")));
     render(tabs.querySelector("button.on").dataset.period);
   });
 
@@ -151,7 +159,7 @@
   map.innerHTML = LAYOUT.map(([name, c, r]) => {
     const n = districts[name] ?? 0;
     return `<div class="tile lv${level(n)}" style="grid-column:${c + 1};grid-row:${r + 1}"
-      data-name="${esc(name)}" data-n="${n}" aria-label="${esc(name)}: ${fmt(n)} reports"></div>`;
+      data-name="${esc(name)}" data-n="${n}" role="button" tabindex="0" aria-label="${esc(name)}: ${fmt(n)} reports. Show stories"></div>`;
   }).join("");
 
   const tip = document.createElement("div");
@@ -168,6 +176,16 @@
     tip.hidden = false;
   });
   map.addEventListener("mouseleave", () => { tip.hidden = true; });
+  const pickDistrict = (t) => {
+    districtFilter.value = t.dataset.name;
+    renderCrimeStories(true);
+    $("#crimeNews").scrollIntoView({ behavior: "smooth", block: "start" });
+  };
+  map.addEventListener("click", (e) => { const t = e.target.closest(".tile"); if (t) pickDistrict(t); });
+  map.addEventListener("keydown", (e) => {
+    const t = e.target.closest(".tile");
+    if (t && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); pickDistrict(t); }
+  });
 
   /* ---------- News + headline lists ---------- */
   const tagIcon = { crime: "fa-handcuffs", corruption: "fa-sack-dollar", development: "fa-industry", policy: "fa-scale-balanced", infrastructure: "fa-train-subway" };
@@ -188,8 +206,34 @@
         <span class="meta">${a.district ? `<b>${esc(a.district)}</b> · ` : ""}${esc(a.tag)} · ${esc(a.source)} · ${fmtDate(a.date)}</span></li>`).join("")
       || '<li class="empty">No stories fetched yet.</li>';
   }
-  headlines($("#crimeHeadlines"), crime.latest);
+
   headlines($("#corruptionHeadlines"), corruption.latest);
+
+  /* Crime stories: filter by district / type, paged */
+  const stories = crime.recent || crime.latest || [];
+  const districtFilter = $("#districtFilter");
+  const typeFilter = $("#typeFilter");
+  const PAGE = 8;
+  let shown = PAGE;
+  Object.keys(districts).sort().forEach((d) => {
+    districtFilter.insertAdjacentHTML("beforeend", `<option value="${esc(d)}">${esc(d)} (${districts[d]})</option>`);
+  });
+  (crime.periods?.month || []).forEach((r) => typeFilter.insertAdjacentHTML("beforeend", `<option value="${esc(r.type)}">${esc(r.type)}</option>`));
+  function renderCrimeStories(reset) {
+    if (reset) shown = PAGE;
+    const d = districtFilter.value, t = typeFilter.value;
+    const list = stories.filter((a) => (!d || a.district === d) && (!t || (a.types || [a.tag]).includes(t)));
+    $("#crimeHeadlines").innerHTML = list.slice(0, shown).map((a) => `
+      <li><a href="${safeUrl(a.url)}" target="_blank" rel="noopener">${esc(a.title)}</a>
+        <span class="meta">${a.district ? `<b>${esc(a.district)}</b> · ` : ""}${esc((a.types || [a.tag]).join(", "))} · ${esc(a.source)}${a.outlets > 1 ? ` +${a.outlets - 1} more` : ""} · ${fmtDate(a.date)}</span></li>`).join("")
+      || '<li class="empty">No crime stories match this filter in the last 30 days.</li>';
+    $("#crimeNewsSub").textContent = d || t ? `${list.length} stories in the last 30 days` : "Most recent crime stories with district";
+    $("#crimeMore").hidden = list.length <= shown;
+  }
+  districtFilter.addEventListener("change", () => renderCrimeStories(true));
+  typeFilter.addEventListener("change", () => renderCrimeStories(true));
+  $("#crimeMore").addEventListener("click", () => { shown += PAGE; renderCrimeStories(false); });
+  renderCrimeStories(true);
 
   /* ---------- Sources ---------- */
   const STATUS = { ok: ["ok", "fa-circle-check"], partial: ["warn", "fa-triangle-exclamation"], cached: ["warn", "fa-clock-rotate-left"],
@@ -204,7 +248,7 @@
   /* ---------- Search ---------- */
   const index = [];
   (D.news || []).forEach((n) => index.push({ kind: n.tag || "News", text: n.title, href: n.url }));
-  (crime.latest || []).forEach((a) => index.push({ kind: "Crime", text: `${a.title}${a.district ? " — " + a.district : ""}`, href: a.url }));
+  stories.forEach((a) => index.push({ kind: "Crime", text: `${a.title}${a.district ? " — " + a.district : ""}`, href: a.url }));
   (corruption.latest || []).forEach((a) => index.push({ kind: "Corruption", text: a.title, href: a.url }));
   Object.keys(districts).forEach((d) => index.push({ kind: "District", text: `${d} — ${fmt(districts[d])} crime reports (30 days)`, href: "#crime" }));
   month.forEach((r) => index.push({ kind: "Crime type", text: `${r.type} — ${fmt(r.count)} reports (30 days)`, href: "#crime" }));
@@ -244,6 +288,38 @@
     if (e.target.closest("a")) { $("#mainnav").classList.remove("open"); toggle.setAttribute("aria-expanded", false); }
   });
 
+  /* ---------- 30-day trend ---------- */
+  const crimeDaily = crime.daily || [];
+  const corrDaily = corruption.daily || [];
+  if (crimeDaily.some((d) => d.partial)) {
+    $("#trendNote").textContent = "Lighter bars: days before daily collection began. News feeds only return recent stories, so those days are under-counted.";
+  }
+  if (window.Chart && crimeDaily.length) {
+    Chart.defaults.font.family = "Inter, system-ui, sans-serif";
+    Chart.defaults.color = "#6b7489";
+    const label = (iso) => { const [, m, d] = iso.split("-").map(Number); return `${d} ${MONTHS[m - 1]}`; };
+    new Chart($("#trendChart"), {
+      data: {
+        labels: crimeDaily.map((d) => label(d.date)),
+        datasets: [
+          { type: "bar", label: "Crime reports", data: crimeDaily.map((d) => d.count),
+            backgroundColor: crimeDaily.map((d) => (d.partial ? "rgba(224,51,74,.25)" : "rgba(224,51,74,.8)")), borderRadius: 3, order: 1 },
+          { type: "line", label: "Corruption reports", data: corrDaily.map((d) => d.count),
+            borderColor: "#f5b301", backgroundColor: "#f5b301", pointRadius: 2.5, borderWidth: 2, tension: .3, order: 0 }
+        ]
+      },
+      options: {
+        maintainAspectRatio: false,
+        interaction: { mode: "index", intersect: false },
+        plugins: { legend: { position: "top", align: "end", labels: { boxWidth: 12, boxHeight: 8, font: { size: 11 } } } },
+        scales: {
+          x: { grid: { display: false }, ticks: { font: { size: 10 }, maxRotation: 0, autoSkipPadding: 12 } },
+          y: { beginAtZero: true, grid: { color: "#eef0f4" }, ticks: { precision: 0, font: { size: 10 } } }
+        }
+      }
+    });
+  }
+
   /* ---------- Economy (only when an official source is connected) ---------- */
   if (!economy?.series?.length) return;
   $("#economy").hidden = false;
@@ -258,8 +334,6 @@
     <div class="hl purple"><b>${growth[last] ?? "—"}%</b><span>Nominal growth</span><span>${esc(years[last])}</span></div>`;
 
   if (!window.Chart) return;
-  Chart.defaults.font.family = "Inter, system-ui, sans-serif";
-  Chart.defaults.color = "#6b7489";
   new Chart($("#gdpChart"), {
     data: {
       labels: years,
