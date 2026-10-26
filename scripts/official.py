@@ -122,10 +122,11 @@ def _month_key(row):
     return f"{row['year']}-{MONTHS.index(row['month']) + 1:02d}"
 
 
-def fetch_inflation(cache, now):
-    """Tamil Nadu and All-India consumer price inflation. Refreshed every 6 hours, hourly around release day."""
+def fetch_inflation(cache, now, force=False):
+    """Tamil Nadu and All-India consumer price inflation. Refreshed every 6 hours, hourly around release day
+    and on every full run."""
     old = cache.get("inflation")
-    if old and _age_hours(old, now) < 6 and not 12 <= now.day <= 14:
+    if old and not force and _age_hours(old, now) < 6 and not 12 <= now.day <= 14:
         return {"status": "ok", "detail": f"latest {old['latest']['month']}, checked {old['fetched'][:16]}"}
     years = f"{now.year - 1},{now.year}"
     series = {}
@@ -203,10 +204,11 @@ def parse_liabilities(page):
     return years
 
 
-def fetch_debt(cache, now):
-    """Tamil Nadu's outstanding liabilities (end-March), all years in the latest Handbook. Refreshed weekly."""
+def fetch_debt(cache, now, force=False):
+    """Tamil Nadu's outstanding liabilities (end-March), all years in the latest Handbook.
+    Refreshed weekly and on every full run."""
     old = cache.get("debt")
-    if old and _age_hours(old, now) < 24 * 7:
+    if old and not force and _age_hours(old, now) < 24 * 7:
         return {"status": "ok", "detail": f"end-March {old['latest']['year']}, checked {old['fetched'][:10]}"}
     listing = get(RBI_HANDBOOK)
     m = re.search(r"PublicationsView\.aspx\?id=(\d+)'?\"?>\s*Table\s*\d+:\s*" + LIAB_TITLE, listing, re.I)

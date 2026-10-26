@@ -792,9 +792,9 @@ def fetch_stats(history, status, mode, now):
     entries = []
     for key, name, url, fetch in (
         ("inflation", "MoSPI — Consumer Price Index (inflation)", official.MOSPI_PAGE,
-         lambda: official.fetch_inflation(stats, now)),
+         lambda: official.fetch_inflation(stats, now, force=mode == "full")),
         ("debt", "RBI — Outstanding liabilities of states", official.RBI_HANDBOOK,
-         lambda: official.fetch_debt(stats, now)),
+         lambda: official.fetch_debt(stats, now, force=mode == "full")),
         ("borrowing", "RBI — State Government Securities auctions", official.RBI_LIST,
          lambda: official.fetch_borrowing(stats, now, full=mode == "full")),
     ):
