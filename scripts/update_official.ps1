@@ -15,6 +15,14 @@ function Stop-OnError($what) {
     if ($LASTEXITCODE -ne 0) { Write-Host "Stopped: $what failed." -ForegroundColor Red; exit 1 }
 }
 
+# An hourly update running on GitHub right now would overwrite what this script publishes, so wait for it
+for ($i = 0; $i -lt 30; $i++) {
+    $runs = & $gh run list --repo niyosh/tnwatch --workflow update.yml --limit 5 --json status | ConvertFrom-Json
+    if (@($runs | Where-Object { $_.status -ne "completed" }).Count -eq 0) { break }
+    if ($i -eq 0) { Write-Host "Waiting for the update running on GitHub to finish..." }
+    Start-Sleep -Seconds 10
+}
+
 Write-Host "1/4  Getting the latest data from GitHub..."
 git fetch -q origin data; Stop-OnError "downloading the data branch"
 if (Test-Path data) { Remove-Item -Recurse -Force data }
@@ -33,6 +41,15 @@ python scripts/fetch_data.py --mode official
 $fetched = $LASTEXITCODE
 Remove-Item Env:\DATA_GOV_IN_API_KEY
 if ($fetched -ne 0) { Write-Host "Stopped: the fetch failed." -ForegroundColor Red; exit 1 }
+
+# Publish only if data.gov.in actually answered; otherwise the site keeps what it has
+$auto = Get-Content data\auto.json -Raw -Encoding UTF8 | ConvertFrom-Json
+$failed = @($auto.sources | Where-Object { $_.url -like "*data.gov.in*" -and $_.status -notin @("ok", "not configured") })
+if ($failed.Count -gt 0) {
+    foreach ($f in $failed) { Write-Host "Not refreshed: $($f.name) - $($f.detail)" -ForegroundColor Yellow }
+    Write-Host "Nothing was published; the site keeps its current figures. Try again later." -ForegroundColor Yellow
+    exit 1
+}
 
 Write-Host "4/4  Publishing..."
 Push-Location data

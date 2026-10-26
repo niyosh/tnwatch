@@ -871,6 +871,10 @@ def main():
         status.extend(history.get("official_status", []))
     for saved in history.get("official", {}).values():
         saved["series"] = first_per_year(saved.get("series", []))
+    for entry in history.get("official_status", []):  # keep "N years" in step with the cleaned series
+        saved = next((v for v in history.get("official", {}).values() if v["name"] == entry["name"]), None)
+        if saved and saved["series"] and entry.get("status") == "ok":
+            entry["detail"] = f"{len(saved['series'])} years, latest {saved['series'][-1]['year']}"
     print("Fetching MoSPI and RBI statistics…")
     stats = fetch_stats(history, status, mode, now)
     history.setdefault("road_since", today.strftime("%Y-%m-%d"))
