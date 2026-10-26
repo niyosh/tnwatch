@@ -49,6 +49,61 @@ CASES = [
      ("corruption", {"Bribery Cases", "Arrests & Chargesheets"}, "Tiruchirappalli")),
 ]
 
+CASES += [
+    # Road accidents
+    ("road", "Two Killed in Road Accident in Erode District", ("road", set(), "Erode")),
+    ("road", "Omni bus cleaner killed, over 40 passengers injured in accident on highway in Tiruchi district",
+     ("road", {"Bus"}, "Tiruchirappalli")),
+    ("road", "தூத்துக்குடி: பைக் மீது லாரி மோதிய விபத்தில் வாலிபர் பலி",
+     ("road", {"Two-wheeler", "Lorry / Truck"}, "Thoothukudi")),
+    ("road", "சுற்றுலா வேன் கவிழ்ந்து 14 பேர் படுகாயம் - கொடைக்கானல்", ("road", {"Car / Van"}, "Dindigul")),
+    ("road", "Salem High football bus crash leaves 25 injured; one remains hospitalized", None),
+    ("road", "ராஜஸ்தான்: சாலை விபத்தில் 6 போ் உயிரிழப்பு", None),
+    ("road", "சிவகாசி பட்டாசு ஆலை வெடி விபத்தில் 3 பேர் பலி", None),
+    ("road", "Driver dies as TNSTC bus buried under landslide on Mettupalayam-Coonoor Ghat Road", None),
+    ("road", "Road Accidents Mar Festivities Across India; 40 Killed Across MP, Punjab, UP, Tamil Nadu And Bengal", None),
+    ("road", "Three dead in crash along Salem Main Road in St. Ann last night", None),
+    ("road", "Kerala man dies as car rams lorry near Coimbatore", ("road", {"Car / Van"}, "Coimbatore")),
+]
+
+# (headline, deaths, injured) named in road accident headlines
+CASUALTY_CASES = [
+    ("2 Killed As Bike Bursts Into Flames After Head-On Crash With Another 2-Wheeler In Tamil Nadu", 2, 0),
+    ("Omni bus cleaner killed, over 40 passengers injured in accident on highway in Tiruchi district", 1, 40),
+    ("Chennai bus-motorcycle collision injures three teens, driver assaulted", 0, 3),
+    ("Class 12 student killed and four injured in accident on Tambaram-Maduravoyal bypass", 1, 4),
+    ("60-year-old man dies in road accident in Madurai city", 1, 0),
+    ("Diesel tanker overturns on Salem highway, driver injured", 0, 1),
+    ("கிருஷ்ணகிரியில் சாலை விபத்தில் 2 பேர் உடல் கருகி பலி", 2, 0),
+    ("மாத்தூர் அருகே இருசக்கர வாகனங்கள் நேருக்கு நேர் மோதல்: தீயில் கருகி இருவர் பலி", 2, 0),
+    ("ஆந்திரம்: சாலை விபத்தில் ஐவா் உயிரிழப்பு", 5, 0),
+    ("சுற்றுலா வேன் கவிழ்ந்து 14 பேர் படுகாயம்", 0, 14),
+]
+
+# RBI tables, trimmed copies of the real layout
+RESULT_HTML = """<p>Date : Oct 13, 2026</p><table>
+<tr><td>Sr. No</td><td>State</td><td>Amount to be raised</td><td>Amount Accepted</td><td>Cut off Price/Yield</td><td>Tenor</td></tr>
+<tr><td>9.</td><td>Odisha</td><td>500</td><td>500</td><td>96.79/7.8520</td><td>Re-issue of 7.16% Odisha SGS 2032</td></tr>
+<tr><td>10.</td><td>Tamil Nadu</td><td>2000</td><td>2000</td><td>8.14</td><td>20</td></tr>
+<tr><td>2000</td><td>-</td><td>-</td><td>25</td></tr>
+<tr><td>3000</td><td>3000</td><td>97.10/8.18</td><td>Re-issue of 7.90% Tamil Nadu SGS 2056, issued on October 14, 2026</td></tr>
+<tr><td>11.</td><td>Uttar Pradesh</td><td>1500</td><td>1500</td><td>8.11</td><td>12</td></tr>
+<tr><td>Total</td><td>31200</td><td>30005</td></tr></table>"""
+NOTICE_HTML = """<p>Date : Oct 23, 2026</p><table>
+<tr><td>11.</td><td>Tamil Nadu</td><td>2500</td><td>Re-issue of 7.80% Tamil Nadu SGS 2041, issued on June 03, 2026</td><td>Price</td></tr>
+<tr><td>2000</td><td>30</td><td>Yield</td></tr>
+<tr><td>12.</td><td>Uttar Pradesh</td><td>500</td><td>Re-issue of 7.14% Uttar Pradesh SGS 2032</td><td>Price</td></tr>
+</table><p>The auction will be conducted on the Reserve Bank of India Core Banking Solution (E-Kuber) system
+on October 27, 2026 (Tuesday).</p>"""
+LIAB_HTML = """<p>TABLE 176: STATE-WISE COMPOSITION OF OUTSTANDING LIABILITIES - 2024 (Concld.)</p><table>
+<tr><td>State/Union Territory</td><td>Total Internal Debt</td><td>Outstanding Liabilities</td></tr>
+<tr><td>1</td><td>13</td><td>20 = (14 to 19)</td></tr>
+<tr><td>Kerala</td><td>3,00,000.0</td><td>4,00,000.0</td></tr>
+<tr><td>Tamil Nadu</td><td>6,50,000.5</td><td>8,50,000.5</td></tr></table>
+<p>TABLE 176: STATE-WISE COMPOSITION OF OUTSTANDING LIABILITIES - 2025 (Concld.)</p><table>
+<tr><td>State/Union Territory</td><td>Total Internal Debt</td><td>Outstanding Liabilities</td></tr>
+<tr><td>Tamil Nadu</td><td>7,29,411.5</td><td>9,55,690.5</td></tr></table>"""
+
 DISTRICT_CASES = [
     ("Rising input costs erode margins of Tamil Nadu textile units", None),
     ("P Chidambaram questions the Centre on GST", None),
@@ -78,6 +133,11 @@ SAME_STORY_CASES = [
     # two different thefts in Chennai on the same day
     (story("Chain snatched from woman in Chennai's Anna Nagar", "crime", ["Theft"], "Chennai"),
      story("House burgled in Chennai's Velachery, 20 sovereigns stolen", "crime", ["Theft"], "Chennai"), False),
+    # one crash, one report names the vehicle and the other doesn't
+    (story("Class 12 student killed as car driven by minor crashes on Tambaram-Maduravoyal bypass road", "road",
+           ["Car / Van"], "Chengalpattu"),
+     story("Class 12 student killed and four injured in accident on Tambaram-Maduravoyal bypass", "road",
+           ["Other"], "Chengalpattu"), True),
     # same type and district but days apart
     (story("Rowdy hacked to death in Salem", "crime", ["Murder"], "Salem", "2026-10-20"),
      story("சேலத்தில் ரவுடி கொலை", "crime", ["Murder"], "Salem", "2026-10-26"), False),
@@ -108,8 +168,26 @@ def main():
     for a, b, expected in SAME_STORY_CASES:
         if fd.same_story(a, b) != expected:
             failures.append(f"same_story({a['title']!r}, {b['title']!r}) should be {expected}")
+    for title, deaths, injured in CASUALTY_CASES:
+        got = fd.casualties(title)
+        if got != (deaths, injured):
+            failures.append(f"casualties of {title!r}: expected {(deaths, injured)}, got {got}")
 
-    total = len(CASES) + len(DISTRICT_CASES) + len(SAME_STORY_CASES)
+    official = []
+    result = fd.official.parse_result(RESULT_HTML, 1)
+    got = [(t["accepted"], t["yield"], t["tenor"]) for t in result["tranches"]]
+    if result["date"] != "2026-10-13" or got != [(2000.0, 8.14, 20), (0.0, None, 25), (3000.0, 8.18, 30)]:
+        official.append(f"auction result parsed as {result}")
+    notice = fd.official.parse_notice(NOTICE_HTML, 2)
+    if notice["auctionDate"] != "2026-10-27" or [(t["amount"], t["tenor"]) for t in notice["tranches"]] != [(2500.0, 15), (2000.0, 30)]:
+        official.append(f"auction notice parsed as {notice}")
+    years = fd.official.parse_liabilities(LIAB_HTML)
+    if years.get(2025, {}).get("Tamil Nadu", {}).get("Outstanding Liabilities") != 955690.5 \
+            or years.get(2024, {}).get("Kerala", {}).get("Outstanding Liabilities") != 400000.0:
+        official.append(f"liabilities parsed as {years}")
+    failures += official
+
+    total = len(CASES) + len(DISTRICT_CASES) + len(SAME_STORY_CASES) + len(CASUALTY_CASES) + 3
     if failures:
         print(f"{len(failures)} of {total} checks failed:")
         for f in failures:

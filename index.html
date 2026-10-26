@@ -16,7 +16,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@500;600;700;800&family=Inter:wght@400;500;600;700&family=Noto+Sans+Tamil:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-  <link rel="stylesheet" href="css/style.css?v=4">
+  <link rel="stylesheet" href="css/style.css?v=5">
 </head>
 <body>
 
@@ -40,11 +40,12 @@
         <a class="active" href="#"><i class="fa-solid fa-house"></i><span data-i18n="navHome">Home</span></a>
         <a href="#crime"><i class="fa-solid fa-shield-halved"></i><span data-i18n="navCrime">Crime</span></a>
         <a href="#corruption"><i class="fa-solid fa-handshake-slash"></i><span data-i18n="navCorruption">Corruption</span></a>
+        <a href="#road"><i class="fa-solid fa-car-burst"></i><span data-i18n="navRoad">Road Safety</span></a>
+        <a href="#prices"><i class="fa-solid fa-tags"></i><span data-i18n="navPrices">Prices</span></a>
+        <a href="#debt"><i class="fa-solid fa-landmark"></i><span data-i18n="navDebt">Debt</span></a>
         <a href="#news"><i class="fa-solid fa-newspaper"></i><span data-i18n="navNews">News</span></a>
         <a href="#economy" id="navEconomy" hidden><i class="fa-solid fa-chart-column"></i><span data-i18n="navEconomy">Economy</span></a>
-        <a href="#trend"><i class="fa-solid fa-chart-line"></i><span data-i18n="navTrends">Trends</span></a>
         <a href="#sources"><i class="fa-solid fa-database"></i><span data-i18n="navSources">Sources</span></a>
-        <a href="#opendata"><i class="fa-solid fa-download"></i><span data-i18n="navOpenData">Open Data</span></a>
       </nav>
 
       <button class="lang-btn" id="langToggle" type="button" lang="ta" aria-label="தமிழில் படிக்க">தமிழ்</button>
@@ -73,7 +74,7 @@
         <h1 data-i18n="heroTitle">A Transparent<br><span>Tamil Nadu</span></h1>
         <p class="lead" data-i18n="heroLead">Real Data. Real Facts. Informed Citizens.</p>
         <p class="topics">
-          <a href="#crime" data-i18n="topicCrime">Crime</a><a href="#corruption" data-i18n="topicCorruption">Corruption</a><a href="#news" data-i18n="topicNews">News</a><a href="#sources" data-i18n="topicSources">Public Sources</a>
+          <a href="#crime" data-i18n="topicCrime">Crime</a><a href="#corruption" data-i18n="topicCorruption">Corruption</a><a href="#road" data-i18n="topicRoad">Road Safety</a><a href="#prices" data-i18n="topicPrices">Prices</a><a href="#debt" data-i18n="topicDebt">Government Debt</a><a href="#news" data-i18n="topicNews">News</a>
         </p>
       </div>
       <blockquote class="hero-quote">
@@ -96,7 +97,7 @@
     <i class="fa-solid fa-circle-info"></i>
     <span data-i18n="notice">Every figure here is collected automatically from public sources and updated every hour. Daily, weekly and
     monthly counts are <strong>news reports</strong> found in public English and Tamil news feeds, not official police statistics.
-    Official figures come from NCRB. <a href="#sources">See sources</a>.</span>
+    Inflation comes from MoSPI and state debt from RBI. <a href="#sources">See sources</a>.</span>
     <span class="notice-actions">
       <span class="updated" id="lastUpdated"></span>
       <button type="button" class="share-btn" id="shareSite"><i class="fa-solid fa-share-nodes"></i><span data-i18n="shareBtn">Share</span></button>
@@ -205,6 +206,121 @@
       <button class="more-btn" id="crimeMore" hidden data-i18n="showMore">Show more</button>
     </section>
 
+    <!-- ================= ROAD SAFETY ================= -->
+    <section class="card" id="road">
+      <div class="card-head">
+        <span class="card-icon amber"><i class="fa-solid fa-car-burst"></i></span>
+        <div>
+          <h2 data-i18n="roadTitle">Road Safety</h2>
+          <p id="roadSub">Road accident news reports</p>
+        </div>
+        <div class="tabs" data-target="road" role="tablist" aria-label="Road accidents period">
+          <button data-period="today" data-i18n="tabToday">Today</button>
+          <button data-period="week" data-i18n="tabWeek">This Week</button>
+          <button data-period="month" class="on" data-i18n="tabMonth">This Month</button>
+        </div>
+      </div>
+      <div class="kpis" id="roadKpis"></div>
+      <table class="stat-table" id="roadTable"></table>
+      <div class="chart-box short"><canvas id="roadChart" aria-label="Road deaths and accident reports per day" role="img"></canvas></div>
+      <p class="fine" data-i18n="roadNote">Deaths and injuries are the numbers named in news headlines; a headline without a number counts as one. These are not official police figures.</p>
+    </section>
+
+    <section class="card" id="roadMapCard">
+      <div class="card-head">
+        <span class="card-icon red"><i class="fa-solid fa-map-location-dot"></i></span>
+        <div>
+          <h2 data-i18n="roadMapTitle">Road Deaths by District</h2>
+          <p data-i18n="roadMapSub">Deaths named in news reports, last 30 days</p>
+        </div>
+      </div>
+      <div class="road-map-body">
+        <div class="tile-map" id="roadMap"></div>
+        <ol class="rank-list" id="roadDistricts"></ol>
+      </div>
+    </section>
+
+    <section class="card" id="roadNews">
+      <div class="card-head">
+        <span class="card-icon amber"><i class="fa-solid fa-road"></i></span>
+        <div>
+          <h2 data-i18n="roadNewsTitle">Latest Road Accident Reports</h2>
+          <p data-i18n="roadNewsSub">Most recent accident stories with district</p>
+        </div>
+      </div>
+      <ul class="headline-list" id="roadHeadlines"></ul>
+    </section>
+
+    <!-- ================= PRICES (MoSPI CPI) ================= -->
+    <section class="card" id="prices">
+      <div class="card-head">
+        <span class="card-icon purple"><i class="fa-solid fa-tags"></i></span>
+        <div>
+          <h2 data-i18n="pricesTitle">Prices &amp; Inflation</h2>
+          <p id="pricesSub">Consumer Price Index</p>
+        </div>
+      </div>
+      <div id="pricesBody" class="figure-body"></div>
+    </section>
+
+    <section class="card" id="pricesTrend">
+      <div class="card-head">
+        <span class="card-icon purple"><i class="fa-solid fa-chart-line"></i></span>
+        <div>
+          <h2 data-i18n="pricesTrendTitle">Inflation Trend</h2>
+          <p data-i18n="pricesTrendSub">Tamil Nadu vs India, year-on-year (%)</p>
+        </div>
+      </div>
+      <div class="chart-box"><canvas id="inflationChart" aria-label="Tamil Nadu and India inflation by month" role="img"></canvas></div>
+      <ol class="rank-list compact" id="inflationStates"></ol>
+    </section>
+
+    <section class="card" id="pricesWhy">
+      <div class="card-head">
+        <span class="card-icon purple"><i class="fa-solid fa-basket-shopping"></i></span>
+        <div>
+          <h2 data-i18n="pricesWhyTitle">What's Getting Costlier</h2>
+          <p data-i18n="pricesWhySub">Inflation by category, Tamil Nadu vs India (%)</p>
+        </div>
+      </div>
+      <div class="chart-box tall"><canvas id="divisionChart" aria-label="Inflation by category" role="img"></canvas></div>
+    </section>
+
+    <!-- ================= DEBT (RBI) ================= -->
+    <section class="card" id="debt">
+      <div class="card-head">
+        <span class="card-icon blue"><i class="fa-solid fa-landmark"></i></span>
+        <div>
+          <h2 data-i18n="debtTitle">Tamil Nadu Government Debt</h2>
+          <p id="debtSub">Outstanding liabilities</p>
+        </div>
+      </div>
+      <div id="debtBody" class="figure-body"></div>
+    </section>
+
+    <section class="card" id="debtTrend">
+      <div class="card-head">
+        <span class="card-icon blue"><i class="fa-solid fa-chart-column"></i></span>
+        <div>
+          <h2 data-i18n="debtTrendTitle">Debt Over the Years</h2>
+          <p data-i18n="debtTrendSub">Outstanding liabilities at end-March (₹ lakh crore)</p>
+        </div>
+      </div>
+      <div class="chart-box tall"><canvas id="debtChart" aria-label="Tamil Nadu debt by year" role="img"></canvas></div>
+      <p class="fine" id="debtGrowth"></p>
+    </section>
+
+    <section class="card" id="borrowing">
+      <div class="card-head">
+        <span class="card-icon green"><i class="fa-solid fa-money-bill-transfer"></i></span>
+        <div>
+          <h2 data-i18n="borrowTitle">Borrowing This Year</h2>
+          <p data-i18n="borrowSub">Weekly RBI auctions of state government bonds</p>
+        </div>
+      </div>
+      <div id="borrowBody" class="figure-body"></div>
+    </section>
+
     <!-- Latest corruption headlines -->
     <section class="card" id="corruptionNews">
       <div class="card-head">
@@ -251,7 +367,8 @@
         <li data-i18n="method2">Headlines are sorted into crime types and districts by keywords.</li>
         <li data-i18n="method3">The same incident covered by several outlets is counted once. English and Tamil stories are matched by type, district and day.</li>
         <li data-i18n="method5">Mistakes can be reported with the flag on each story and are fixed by hand.</li>
-        <li data-i18n="method4">Official yearly totals come from NCRB via data.gov.in.</li>
+        <li data-i18n="method6">Inflation is read from MoSPI's official API; state debt and weekly borrowing from RBI publications.</li>
+        <li data-i18n="method4">Official yearly crime totals come from NCRB via data.gov.in.</li>
       </ul>
     </section>
 
@@ -280,7 +397,7 @@
 
   <script defer src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
   <script defer src="data/auto.js"></script>
-  <script defer src="js/i18n.js?v=4"></script>
-  <script defer src="js/app.js?v=4"></script>
+  <script defer src="js/i18n.js?v=5"></script>
+  <script defer src="js/app.js?v=5"></script>
 </body>
 </html>

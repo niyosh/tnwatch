@@ -29,6 +29,8 @@ import xml.etree.ElementTree as ET
 from datetime import date, datetime, timedelta, timezone
 from email.utils import parsedate_to_datetime
 
+import official
+
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DATA = os.path.join(ROOT, "data")
 HISTORY = os.path.join(DATA, "history.json")
@@ -109,6 +111,68 @@ DEV_TAGS = {
                "அரசாணை", "சட்டப்பேரவை", "மசோதா", "அமைச்சரவை", "கொள்கை"],
 }
 
+# Road accidents: an accident word plus a vehicle or road word, sorted by the vehicles involved
+ROAD_GATE = ["road accident", "accident", "collision", "collided", "collides", "crash", "rammed", "rams ", "overturn",
+             "hit-and-run", "hit and run", "run over", "runs over", "knocked down", "mowed down", "head-on", "skidded",
+             "விபத்த", "மோதி", "மோதல்", "கவிழ்ந்", "கவிழ்த்", "நேருக்கு நேர்", "சக்கரத்தில் சிக்கி"]
+ROAD_PLACE = ["road", "highway", r"nh\b", "bypass", "flyover", "vehicle", "சாலை", "நெடுஞ்சாலை", "வாகன"]
+ROAD_TYPES = {
+    "Two-wheeler": ["bike", "motorcycl", "two-wheeler", "two wheeler", "scooter", "moped", "pillion",
+                    "பைக்", "இருசக்கர", "ஸ்கூட்டர்", "மொபெட்"],
+    "Bus": [r"bus\b", "buses", "பேருந்த", "பஸ்"],
+    "Lorry / Truck": ["lorr", "truck", "tanker", "tipper", "container", "trailer",
+                      "லாரி", "டிப்பர்", "டேங்கர்", "கன்டெய்னர்", "கண்டெய்னர்"],
+    "Car / Van": [r"car\b", r"cars\b", "suv", "jeep", r"van\b", r"cab\b", "taxi",
+                  "கார்(?!த்)", "காரில்", "காரும்", "காரின்", "வேன்", "வேனில்", "ஜீப்"],
+    "Pedestrian": ["pedestrian", "knocked down", "mowed down", "run over", "runs over", "walking", "crossing the road",
+                   "பாதசாரி", "நடந்து சென்ற", "சாலையைக் கடக்க", "சாலையை கடக்க"],
+    "Other": ["autorickshaw", r"auto\b", "tractor", "ஆட்டோ", "டிராக்டர"],
+}
+ROAD_ICONS = {
+    "Two-wheeler": "fa-motorcycle", "Bus": "fa-bus", "Lorry / Truck": "fa-truck", "Car / Van": "fa-car-side",
+    "Pedestrian": "fa-person-walking", "Other": "fa-car-burst",
+}
+# Not road accidents: fires, explosions, drowning, rail, air, landslides, VIP convoys
+ROAD_EXCLUDE = re.compile(
+    r"\b(?:fire accident|blaze|cracker|firecracker|fireworks|explosion|blast|boiler|electrocut|drown|landslide|"
+    r"wall collapse|building collapse|train|rail|flight|plane|helicopter|boat|ship|convoy|workplace|quarry)"
+    r"|தீ விபத்த|பட்டாசு|வெடி விபத்த|வெடித்து|மின்சாரம் தாக்கி|மின் விபத்த|நீரில் மூழ்கி|ரயில்|விமான|படகு"
+    r"|நிலச்சரிவ|சுவர் இடிந்து|கான்வாய்", re.I)
+# Roundups that add up several states ("40 killed across MP, Punjab, UP, Tamil Nadu…") are not Tamil Nadu figures
+OTHER_STATES = re.compile(
+    r"\b(?:across india|nationwide|across the country|madhya pradesh|mp|punjab|uttar pradesh|up|bengal|kerala|karnataka|"
+    r"andhra|telangana|maharashtra|gujarat|rajasthan|bihar|odisha|haryana|assam|jharkhand)\b"
+    r"|கேரள|கர்நாடக|ஆந்திர|தெலங்கானா|மகாராஷ்டிர|ராஜஸ்தான்|உத்தரப் ?பிரதேச|மத்தியப் ?பிரதேச|பீகார்|ஒடிசா", re.I)
+# Casualties named in a headline ("2 killed", "Two killed", "இருவர் பலி", "14 பேர் படுகாயம்").
+# Without a number, a death or injury word counts as one; "60-year-old" and "Class 12" are not counts.
+NUM_EN = {"one": 1, "two": 2, "three": 3, "four": 4, "five": 5, "six": 6, "seven": 7, "eight": 8, "nine": 9,
+          "ten": 10, "eleven": 11, "twelve": 12, "a dozen": 12, "dozen": 12, "couple": 2}
+NUM_TA = {"ஒருவர்": 1, "இருவர்": 2, "மூவர்": 3, "நால்வர்": 4, "ஐவர்": 5, "இரண்டு பேர்": 2, "மூன்று பேர்": 3,
+          "நான்கு பேர்": 4, "ஐந்து பேர்": 5, "ஆறு பேர்": 6, "ஏழு பேர்": 7, "எட்டு பேர்": 8, "பத்து பேர்": 10}
+COUNT_EN = r"(\d{1,3}|" + "|".join(sorted(NUM_EN, key=len, reverse=True)) + r")"
+COUNT_TA = r"(?:(\d{1,3})\s*(?:பேர்|நபர்கள்|பேரும்)|(" + "|".join(sorted(NUM_TA, key=len, reverse=True)) + r"))"
+PEOPLE_EN = (r"(?:\s+(?:more|other|people|persons|members|of|a|family|men|women|youths|students|children|kids|"
+             r"pilgrims|devotees|workers|labourers|passengers|friends|siblings|cops|policemen))*")
+NOT_GRADE = r"(?<!class )(?<!std )(?<!plus )(?<![-\w])"
+DEATH_EN = r"\b(?:killed|dead|die|dies|died|charred to death|crushed to death|lose their lives|lost their lives|succumb\w*)\b"
+DEATH_TA = r"(?:பலி|உயிரிழ|சாவு|இறந்|மரணம்)"
+HURT_EN = r"\b(?:injured|hurt|wounded|hospitali[sz]ed)\b"
+HURT_TA = r"(?:படுகாய|காயம|காயமடை)"
+DEATH_COUNT_RE = [
+    re.compile(r"\bdeath toll (?:rises|climbs|goes up|increases|reaches|touches) to " + COUNT_EN, re.I),
+    re.compile(r"பலி எண்ணிக்கை\s*(\d{1,3})"),
+    re.compile(NOT_GRADE + COUNT_EN + PEOPLE_EN + r"\s+(?:were\s+|are\s+)?" + DEATH_EN, re.I),
+    re.compile(r"\b(?:kills|claims|claimed)\s+" + COUNT_EN, re.I),
+    re.compile(COUNT_TA + r"\s*(?:\S+\s+){0,2}?" + DEATH_TA),
+]
+HURT_COUNT_RE = [
+    re.compile(NOT_GRADE + COUNT_EN + PEOPLE_EN + r"\s+(?:were\s+|are\s+)?" + HURT_EN, re.I),
+    re.compile(r"\binjures\s+" + COUNT_EN, re.I),
+    re.compile(COUNT_TA + r"\s*(?:\S+\s+){0,2}?" + HURT_TA),
+]
+DEATH_RE = re.compile(DEATH_EN + "|" + DEATH_TA, re.I)
+HURT_RE = re.compile(HURT_EN + "|" + HURT_TA, re.I)
+
 # What Google News is asked for (it matches whole words, so inflected forms are listed)
 SEARCH_TERMS = {
     "en": {
@@ -130,7 +194,12 @@ SEARCH_TERMS = {
         "Narcotics": ["கஞ்சா", "போதைப்பொருள்", "போதை மாத்திரை"],
     },
 }
-BIG_CITIES = "(Chennai OR Coimbatore OR Madurai OR Tiruchi OR Salem OR Tirunelveli OR Vellore OR Erode)"
+ROAD_SEARCH = {
+    "en": ["road accident", "accident", "collided", "rammed", "overturned", "hit-and-run"],
+    "ta": ["சாலை விபத்து", "விபத்தில்", "மோதி பலி", "கவிழ்ந்து", "நேருக்கு நேர் மோதல்"],
+}
+# Salem and Erode are left out: in English they mostly find stories from abroad (Tamil searches cover them)
+BIG_CITIES = "(Chennai OR Coimbatore OR Madurai OR Tiruchi OR Tirunelveli OR Vellore)"
 
 # District names, spellings and big towns -> district
 DISTRICTS = {
@@ -187,7 +256,15 @@ COURT_RE = re.compile(r"madras high court|madras hc|சென்னை உயர
 TN_RE = re.compile(r"\b(?:tamil ?nadu|tn|dmk|aiadmk|tvk|pmk|vck|mdmk)\b|தமிழ்நாட|தமிழக|திமுக|அதிமுக|தவெக|பாமக|விசிக|மதிமுக", re.I)
 # Salem, Erode etc. also exist abroad; these words only appear in foreign stories
 NOT_TN_RE = re.compile(r"winston|massachusetts|oregon|virginia|illinois|ohio|indiana|dekalb|new hampshire|\bcounty\b|"
-                       r"\bsheriff|salem,? (?:ma|or|nh|va)\b", re.I)
+                       r"\bsheriff|salem,? (?:ma|or|nh|va)\b|\bga\.|georgia|atlanta|troopers|rockdale|"
+                       r"\bhigh (?:school )?football|st\.? ann\b|jamaica|missouri|\binterstate \d", re.I)
+# US local TV and papers that report on their own Salems
+FOREIGN_SOURCE = re.compile(r"\b(?:fox|cbs|nbc|abc) \d+|\b(?:wsb|wsoc|ktvu|khou|wral|wtvd|wbtv|wfaa|kcra|11alive)\b|"
+                            r"journal-constitution|statesman journal|patch\b|gleaner", re.I)
+
+
+def foreign_source(source):
+    return bool(source) and bool(NOT_TN_RE.search(source) or FOREIGN_SOURCE.search(source))
 # A question naming a party is political talk, not a crime report
 PARTY_RE = re.compile(r"\b(?:dmk|aiadmk|tvk|bjp|pmk|congress)\b|திமுக|அதிமுக|தவெக|பாஜக|பாமக|காங்கிரஸ்", re.I)
 
@@ -232,11 +309,15 @@ CRIME_RX = {t: _rx(w) for t, w in CRIME_TYPES.items()}
 CORRUPTION_GATE_RX = _rx(CORRUPTION_GATE)
 CORRUPTION_RX = {t: _rx(w) for t, w in CORRUPTION_TYPES.items()}
 DEV_RX = {t: _rx(w) for t, w in DEV_TAGS.items()}
+ROAD_GATE_RX = _rx(ROAD_GATE)
+ROAD_PLACE_RX = _rx(ROAD_PLACE)
+ROAD_RX = {t: _rx(w) for t, w in ROAD_TYPES.items()}
 DISTRICT_RX = [(d, _district_rx(DISTRICTS[d], DISTRICTS_TA[d])) for d in DISTRICTS]
 PLACE_WORDS = {w for names in DISTRICTS.values() for n in names for w in n.split()}
 PLACE_TA_RX = re.compile("|".join(_ta_stem(a) for names in DISTRICTS_TA.values() for a in names))
-TYPE_WORDS = {re.sub(r"\\b", "", w).lower() for words in [*CRIME_TYPES.values(), *CORRUPTION_TYPES.values()]
-              for w in words if " " not in w}
+TYPE_WORDS = {re.sub(r"\\b|\(.*\)", "", w).lower()
+              for words in [*CRIME_TYPES.values(), *CORRUPTION_TYPES.values(), *ROAD_TYPES.values(), ROAD_GATE]
+              for w in words if " " not in w.strip()}
 
 
 # ---------------------------------------------------------------------------
@@ -309,8 +390,32 @@ def classify(bucket, title):
             return None
         types = [t for t, rx in CORRUPTION_RX.items() if rx.search(text)]
         return ("corruption", types or ["Other Corruption News"]), district
+    if bucket == "road":
+        if ROAD_EXCLUDE.search(text) or not ROAD_GATE_RX.search(text):
+            return None
+        if not district and OTHER_STATES.search(text):
+            return None  # a national or other-state story that mentions Tamil Nadu in passing
+        types = [t for t, rx in ROAD_RX.items() if rx.search(text)]
+        if not types and not ROAD_PLACE_RX.search(text):
+            return None  # an "accident" with no vehicle or road in sight
+        return ("road", types or ["Other"]), district
     tag = next((t for t, rx in DEV_RX.items() if rx.search(text)), "Development")
     return ("development", [tag]), district
+
+
+def casualties(title):
+    """(deaths, injured) named in a road accident headline."""
+    text = norm_text(title)
+
+    def find(patterns, word_rx):
+        for rx in patterns:
+            m = rx.search(text)
+            if m:
+                g = next(x for x in m.groups() if x)
+                return int(g) if g.isdigit() else NUM_EN.get(g.lower(), NUM_TA.get(g, 1))
+        return 1 if word_rx.search(text) else 0
+
+    return find(DEATH_COUNT_RE, DEATH_RE), find(HURT_COUNT_RE, HURT_RE)
 
 
 def _day(a):
@@ -326,7 +431,9 @@ def same_story(a, b, tka=None, tkb=None):
     days = abs(_day(a) - _day(b))
     if days <= 2 and len(tka) >= 3 and len(tkb) >= 3 and len(tka & tkb) / len(tka | tkb) >= 0.5:
         return True
-    if days > 1 or not a["district"] or a["district"] != b["district"] or not set(a["types"]) & set(b["types"]):
+    # "Other" (no vehicle named) can be the same crash as any typed report of it
+    same_type = set(a["types"]) & set(b["types"]) or (a["cat"] == "road" and "Other" in a["types"] + b["types"])
+    if days > 1 or not a["district"] or a["district"] != b["district"] or not same_type:
         return False
     if a.get("lang", "en") != b.get("lang", "en"):
         return True  # English and Tamil words can't be compared: same type, district and day is the best signal
@@ -362,6 +469,9 @@ def build_queries(mode):
         qs.append(("corruption", "en", f'{corr_en} "Tamil Nadu" when:{when}'))
         qs.append(("corruption", "en", f"{corr_en} {BIG_CITIES} when:{when}"))
         qs.append(("corruption", "ta", f"{corr_ta} when:{when}"))
+        qs.append(("road", "en", f'{or_terms(ROAD_SEARCH["en"])} "Tamil Nadu" when:{when}'))
+        qs.append(("road", "en", f"{or_terms(ROAD_SEARCH['en'])} {BIG_CITIES} when:{when}"))
+        qs.append(("road", "ta", f"{or_terms(ROAD_SEARCH['ta'])} when:{when}"))
     dev_when = "1d" if mode == "hourly" else "3d"
     qs.append(("development", "en",
                f'{or_terms(["metro", "investment", "scheme", "industrial", "project", "policy"])} "Tamil Nadu" government when:{dev_when}'))
@@ -416,7 +526,7 @@ def fetch_news(history, status, mode, corr):
             except Exception:
                 continue
             key = norm_key(title)
-            if not key or key in merged:
+            if not key or key in merged or foreign_source(item.findtext("source")):
                 continue
             if any(_hit({"title": title, "url": link}, p) for p in corr.get("exclude", [])):
                 continue
@@ -438,6 +548,8 @@ def fetch_news(history, status, mode, corr):
                 "district": district, "lang": script_lang(title), "date": published.strftime("%Y-%m-%d"),
                 "ts": published.isoformat(),
             }
+            if cat == "road":
+                articles[key]["deaths"], articles[key]["injured"] = casualties(title)
             c[2] += 1
         time.sleep(1.0)  # be polite to the feed server
     for edition, name in (("en", "Google News RSS — English"), ("ta", "Google News RSS — Tamil")):
@@ -469,11 +581,16 @@ def reclassify(history):
         a = arts[key]
         # "bucket" is the search a story came from; corrections may later change its "cat"
         result = classify(a.setdefault("bucket", a["cat"]), a["title"])
-        if not result:
+        if not result or foreign_source(a.get("source")):
             del arts[key]
             continue
         (a["cat"], a["types"]), a["district"] = result
         a["lang"] = script_lang(a["title"])
+        if a["cat"] == "road":
+            # the highest numbers any merged outlet reported win over this headline's own
+            deaths, injured = casualties(a["title"])
+            a["deaths"] = max(deaths, a.get("merged_deaths", 0))
+            a["injured"] = max(injured, a.get("merged_injured", 0))
         a["title"] = norm_text(a["title"])
         new_key = norm_key(a["title"])
         if new_key != key:
@@ -516,6 +633,10 @@ def dedupe(history):
             dup["types"] = sorted(set(dup["types"]) | set(a["types"]))
             dup["district"] = dup["district"] or a["district"]
             dup["also"] = dup.get("also", 1) + a.get("also", 1)
+            for field in ("deaths", "injured"):
+                if field in a:
+                    dup["merged_" + field] = max(dup.get("merged_" + field, 0), a[field])
+                    dup[field] = max(dup.get(field, 0), a[field])
             merged[key] = a["date"]
             del arts[key]
             removed += 1
@@ -563,16 +684,44 @@ def build_periods(history, cat, types, icons, today):
 
 
 def hourly_series(arts, now):
-    """Crime and corruption stories per hour (by publication time) over the last 24 hours."""
+    """Crime, corruption and road accident stories per hour (by publication time) over the last 24 hours."""
     end = now.replace(minute=0, second=0, microsecond=0)
     slots = [end - timedelta(hours=i) for i in range(23, -1, -1)]
-    rows = [{"hour": s.strftime("%Y-%m-%dT%H:00"), "crime": 0, "corruption": 0} for s in slots]
+    rows = [{"hour": s.strftime("%Y-%m-%dT%H:00"), "crime": 0, "corruption": 0, "road": 0} for s in slots]
     index = {s.strftime("%Y-%m-%dT%H"): i for i, s in enumerate(slots)}
     for a in arts:
         i = index.get(a["ts"][:13])
-        if i is not None and a["cat"] in ("crime", "corruption"):
+        if i is not None and a["cat"] in ("crime", "corruption", "road"):
             rows[i][a["cat"]] += 1
     return rows
+
+
+def road_summary(arts, today, since):
+    """Road accident reports and the deaths and injuries they name, by vehicle, district and day."""
+    road = [a for a in arts if a["cat"] == "road"]
+
+    def window(days):
+        start = (today - timedelta(days=days - 1)).strftime("%Y-%m-%d")
+        return [a for a in road if a["date"] >= start]
+
+    periods, totals = {}, {}
+    for name, days in (("today", 1), ("week", 7), ("month", 30)):
+        sel = window(days)
+        periods[name] = [{"type": t, "icon": ROAD_ICONS[t], "count": sum(1 for a in sel if t in a["types"]),
+                          "deaths": sum(a.get("deaths", 0) for a in sel if t in a["types"])} for t in ROAD_TYPES]
+        totals[name] = {"reports": len(sel), "deaths": sum(a.get("deaths", 0) for a in sel),
+                        "injured": sum(a.get("injured", 0) for a in sel)}
+    month = window(30)
+    districts = {d: {"reports": 0, "deaths": 0} for d in DISTRICTS}
+    for a in month:
+        if a["district"]:
+            districts[a["district"]]["reports"] += 1
+            districts[a["district"]]["deaths"] += a.get("deaths", 0)
+    days = [(today - timedelta(days=i)).strftime("%Y-%m-%d") for i in range(29, -1, -1)]
+    daily = [{"date": d, "reports": sum(1 for a in road if a["date"] == d),
+              "deaths": sum(a.get("deaths", 0) for a in road if a["date"] == d), "partial": d < since} for d in days]
+    return {"periods": periods, "totals": totals, "districts": districts, "daily": daily,
+            "recent": [story(a) for a in month][:300]}
 
 
 # ---------------------------------------------------------------------------
@@ -626,9 +775,38 @@ def fetch_datagov(history, status):
 
 # ---------------------------------------------------------------------------
 def story(a):
-    return {"title": a["title"], "url": a["url"], "source": a["source"], "date": a["date"],
-            "district": a["district"], "tag": a["types"][0], "types": a["types"],
-            "lang": a.get("lang", "en"), "outlets": a.get("also", 1)}
+    s = {"title": a["title"], "url": a["url"], "source": a["source"], "date": a["date"],
+         "district": a["district"], "tag": a["types"][0], "types": a["types"],
+         "lang": a.get("lang", "en"), "outlets": a.get("also", 1)}
+    if a["cat"] == "road":
+        s["deaths"], s["injured"] = a.get("deaths", 0), a.get("injured", 0)
+    return s
+
+
+def fetch_stats(history, status, mode, now):
+    """Inflation (MoSPI), debt and borrowing (RBI). Each keeps its last good result if a source is down."""
+    stats = history.setdefault("stats", {})
+    if mode == "offline":
+        status.extend(history.get("stats_status", []))
+        return stats
+    entries = []
+    for key, name, url, fetch in (
+        ("inflation", "MoSPI — Consumer Price Index (inflation)", official.MOSPI_PAGE,
+         lambda: official.fetch_inflation(stats, now)),
+        ("debt", "RBI — Outstanding liabilities of states", official.RBI_HANDBOOK,
+         lambda: official.fetch_debt(stats, now)),
+        ("borrowing", "RBI — State Government Securities auctions", official.RBI_LIST,
+         lambda: official.fetch_borrowing(stats, now, full=mode == "full")),
+    ):
+        try:
+            result = fetch()
+        except Exception as e:  # keep the cached figures and say why they weren't refreshed
+            print(f"  ! {name}: {e}", file=sys.stderr)
+            result = {"status": "cached" if key in stats else "error", "detail": str(e)[:160]}
+        entries.append({"name": name, "url": url, **result})
+    history["stats_status"] = entries
+    status.extend(entries)
+    return stats
 
 
 def main():
@@ -656,6 +834,9 @@ def main():
         fetch_datagov(history, status)
     else:
         status.extend(history.get("official_status", []))
+    print("Fetching MoSPI and RBI statistics…")
+    stats = fetch_stats(history, status, mode, now)
+    history.setdefault("road_since", today.strftime("%Y-%m-%d"))
     prune(history, today)
     reclassify(history)
     apply_corrections(history, corr)
@@ -679,7 +860,8 @@ def main():
         # days before the script started running are under-sampled by the feeds
         return [{"date": d, "count": counts[d], "partial": d < since} for d in days]
 
-    news = [story(a) | {"tag": {"crime": "Crime", "corruption": "Corruption"}.get(a["cat"], a["types"][0])}
+    news = [story(a) | {"tag": {"crime": "Crime", "corruption": "Corruption", "road": "Road Safety"}
+                        .get(a["cat"], a["types"][0])}
             for a in arts[:40]]
     official = history.get("official", {})
     out = {
@@ -699,6 +881,10 @@ def main():
             "latest": [story(a) for a in arts if a["cat"] == "corruption"][:12],
             "daily": daily("corruption"),
         },
+        "road": road_summary(arts, today, max(since, history["road_since"])),
+        "inflation": stats.get("inflation"),
+        "debt": stats.get("debt"),
+        "borrowing": stats.get("borrowing"),
         "hourly": hourly_series(arts, now),
         "news": news,
         "economy": next((v for v in official.values() if v["use"] == "economy"), None),
@@ -716,10 +902,11 @@ def main():
     write("version.json", json.dumps({"generatedAt": out["generatedAt"], "lastSuccess": out["lastSuccess"]}))
     with open(os.path.join(DATA, "stories.csv"), "w", encoding="utf-8-sig", newline="") as f:
         w = csv.writer(f)
-        w.writerow(["date", "category", "types", "district", "language", "title", "source", "url", "outlets"])
+        w.writerow(["date", "category", "types", "district", "language", "title", "source", "url", "outlets",
+                    "deaths", "injured"])
         for a in arts:
             w.writerow([a["date"], a["cat"], "; ".join(a["types"]), a["district"] or "", a.get("lang", "en"),
-                        a["title"], a["source"], a["url"], a.get("also", 1)])
+                        a["title"], a["source"], a["url"], a.get("also", 1), a.get("deaths", ""), a.get("injured", "")])
 
     month = out["crime"]["periods"]["month"]
     by_lang = {lang: sum(1 for a in arts if a.get("lang", "en") == lang) for lang in ("en", "ta")}

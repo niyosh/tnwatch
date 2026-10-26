@@ -10,9 +10,17 @@ Every figure on the site is fetched automatically from public sources and refres
 |---|---|---|
 | Crime: Today / Week / Month, district map, trends | Google News RSS searches, English and Tamil editions | Every hour |
 | Corruption | Google News RSS (bribery, DVAC / லஞ்ச ஒழிப்பு, disproportionate assets) | Every hour |
+| Road safety: accidents, deaths and injuries by vehicle and district | Google News RSS (deaths/injuries are the numbers named in headlines) | Every hour |
+| Prices & inflation | MoSPI API (`api.mospi.gov.in`, CPI base 2024=100): Tamil Nadu vs India, rural/urban/food, categories, state ranking | Checked every 6 h, hourly on 12–14th; MoSPI releases monthly on the 12th |
+| Government debt | RBI *Handbook of Statistics on Indian States*, "State-wise Composition of Outstanding Liabilities" | Checked weekly; RBI publishes yearly |
+| Borrowing this year | RBI press releases: weekly auctions of State Government Securities (RSS every hour, monthly archive daily) | Every hour; auctions are weekly |
 | Latest news | Google News RSS | Every hour |
 | Crime: Official | NCRB *Crime in India* via the data.gov.in API (needs a free API key) | Checked daily; NCRB publishes yearly |
 | Economy (GSDP) | data.gov.in API — switched off until a dataset id is added to `scripts/sources.json` | Checked daily |
+
+The MoSPI, RBI-debt and RBI-auction readers live in `scripts/official.py`. Each keeps its last good result, so a source
+being down never blanks the page (the Sources card then shows "cached"). MoSPI's server needs legacy TLS renegotiation,
+which the script enables for that host only (MoSPI's own API client does the same).
 
 Daily, weekly and monthly counts are **news reports**, not official police figures. Headlines are sorted into crime types
 and districts by keyword rules in `scripts/fetch_data.py`, which read English and Tamil (Tamil place names are matched as

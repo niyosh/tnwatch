@@ -197,7 +197,7 @@ mark { background: #fff1a8; border-radius: 2px; }
 }
 .card-head { display: flex; flex-wrap: wrap; gap: 10px 14px; align-items: flex-start; margin-bottom: 14px; }
 .card-head > .tabs { flex: 0 0 auto; margin-left: auto; }
-.card-head > div { flex: 1; min-width: 0; }
+.card-head > div { flex: 1 1 180px; min-width: 0; }
 .card-head h2 { font-size: 16.5px; font-weight: 600; color: var(--ink); }
 .card-head p { margin: 2px 0 0; font-size: 12.5px; color: var(--muted); }
 .card-icon {
@@ -485,3 +485,68 @@ html[lang="ta"] .stat .lbl { font-size: 12px; }
   font-size: 11.5px; color: var(--muted); line-height: 1.5;
   margin: 12px 0 0; padding-top: 10px; border-top: 1px dashed var(--line);
 }
+
+/* ================= ROAD SAFETY, PRICES, DEBT ================= */
+.kpis { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 10px; }
+.kpi { border-radius: 10px; padding: 8px 10px; text-align: center; }
+.kpi b { display: block; font: 700 22px/1.2 Poppins, "Noto Sans Tamil", sans-serif; }
+.kpi span { font-size: 11.5px; color: var(--muted); }
+.kpi.red { background: #fdecee; } .kpi.red b { color: var(--red); }
+.kpi.amber { background: #fff4df; } .kpi.amber b { color: #b86e00; }
+.kpi.blue { background: #e8f0fe; } .kpi.blue b { color: #2357b5; }
+.stat-table thead th { font-size: 11px; font-weight: 600; color: var(--muted); text-align: left; padding: 0 4px 4px; }
+.stat-table thead th.num, .stat-table thead th.chg { text-align: right; }
+.chart-box.short { height: 150px; margin-top: 10px; }
+.road-map-body { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 14px; align-items: start; }
+.rank-list { list-style: none; margin: 0; padding: 0; font-size: 12.5px; }
+.rank-list li { display: grid; grid-template-columns: 1fr auto; gap: 2px 8px; padding: 6px 0; border-bottom: 1px solid var(--line); }
+.rank-list li small { grid-column: 1 / -1; color: var(--muted); font-size: 11px; }
+.rank-list li b { color: var(--red); }
+.rank-list.compact { margin-top: 12px; }
+.rank-list.compact li b { color: var(--ink); }
+.rank-list li.me { background: #f1ebfe; border-radius: 6px; padding: 6px 8px; font-weight: 600; }
+.rank-list li.me b { color: #6233c9; }
+.rank-list .list-title { display: block; border: 0; font-weight: 600; color: var(--muted); font-size: 11.5px; padding-bottom: 2px; }
+.casualty { display: inline-block; margin: 4px 8px 0 0; font-size: 11.5px; font-weight: 600; color: var(--red); }
+.filter-chip { display: flex; align-items: center; gap: 8px; font-size: 12.5px; font-weight: 600; padding: 4px 0 8px; }
+.filter-chip button { border: 0; background: #eef0f4; border-radius: 50%; width: 22px; height: 22px; cursor: pointer; }
+.figure-body .big b { display: block; font: 800 40px/1.1 Poppins, "Noto Sans Tamil", sans-serif; color: var(--ink); }
+.figure-body .big span { display: block; font-size: 13px; color: var(--muted); margin-top: 4px; }
+.rank-badge {
+  display: inline-flex; gap: 6px; align-items: center; margin: 12px 0 4px; padding: 6px 10px; border-radius: 8px;
+  background: #eef0f4; font-size: 12.5px; font-weight: 600; color: #4e5668;
+}
+.rank-badge.hot { background: #fde7ea; color: #c8213a; }
+.compare { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 12px 0 4px; }
+.compare > div { border: 1px solid var(--line); border-radius: 10px; padding: 8px 10px; min-width: 0; }
+.compare span { display: block; font-size: 11.5px; color: var(--muted); }
+.compare b { font: 700 18px Poppins, "Noto Sans Tamil", sans-serif; }
+.compare small { display: block; font-size: 11px; color: var(--muted); }
+.compare .next { border-color: #b9e6c9; background: #f0fbf4; }
+.stack { display: flex; height: 14px; border-radius: 7px; overflow: hidden; margin: 14px 0 8px; background: #eef0f4; }
+.legend-list { list-style: none; margin: 0; padding: 0; font-size: 12.5px; }
+.legend-list li { display: grid; grid-template-columns: 12px 1fr auto 40px; gap: 8px; align-items: center; padding: 4px 0; }
+.legend-list i { width: 10px; height: 10px; border-radius: 3px; }
+.legend-list small { text-align: right; color: var(--muted); }
+.auction-list { list-style: none; margin: 0; padding: 0; }
+.auction-list li { display: grid; grid-template-columns: auto 1fr; gap: 0 10px; padding: 7px 0; border-bottom: 1px solid var(--line); font-size: 12.5px; }
+.auction-list time { color: var(--muted); }
+.auction-list b { text-align: right; }
+.auction-list small { grid-column: 1 / -1; color: var(--muted); font-size: 11.5px; }
+.pill.road-safety { background: #fde9df; color: #b5471a; }
+.stat.long .val { white-space: normal; font-size: 17px; }
+
+/* eight headline numbers: two rows of four */
+.stats { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+@media (max-width: 1100px) {
+  .stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 760px) {
+  .stats { grid-template-columns: 1fr 1fr; }
+  .road-map-body { grid-template-columns: 1fr; }
+  .kpi b { font-size: 19px; }
+  .figure-body .big b { font-size: 34px; }
+}
+.mainnav a[hidden] { display: none; }
+#roadTable .chg { width: auto; }
+.stat-table thead th { line-height: 1.25; }
