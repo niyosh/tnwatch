@@ -196,7 +196,7 @@ mark { background: #fff1a8; border-radius: 2px; }
   padding: 18px 18px 14px; display: flex; flex-direction: column; min-width: 0;
 }
 .card-head { display: flex; flex-wrap: wrap; gap: 10px 14px; align-items: flex-start; margin-bottom: 14px; }
-.card-head > .tabs { margin-left: auto; }
+.card-head > .tabs { flex: 0 0 auto; margin-left: auto; }
 .card-head > div { flex: 1; min-width: 0; }
 .card-head h2 { font-size: 16.5px; font-weight: 600; color: var(--ink); }
 .card-head p { margin: 2px 0 0; font-size: 12.5px; color: var(--muted); }
@@ -448,4 +448,40 @@ html[lang="ta"] .stat .lbl { font-size: 12px; }
   }
   html[lang="ta"] .mainnav.open { display: flex; }
   html[lang="ta"] .mainnav a i { display: inline-block; width: 18px; }
+}
+
+/* ================= FRESHNESS, SHARING, CORRECTIONS ================= */
+.notice-actions { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+.notice .updated { cursor: help; }
+.notice.stale { background: #fff6e0; border-color: #f3d58b; color: #6b4e00; }
+.stale-msg { flex-basis: 100%; font-weight: 600; color: #8a5a00; }
+.share-btn {
+  display: inline-flex; gap: 6px; align-items: center; flex-shrink: 0;
+  border: 1px solid #cddcf7; background: #fff; color: var(--brand);
+  font: 600 12.5px Inter, "Noto Sans Tamil", sans-serif; padding: 6px 12px; border-radius: 8px; cursor: pointer;
+}
+.share-btn:hover { background: #f2f6fe; }
+.share-btn.ghost { margin-left: auto; padding: 5px 10px; }
+.toast {
+  position: fixed; left: 50%; bottom: 20px; transform: translateX(-50%); z-index: 90;
+  display: flex; gap: 12px; align-items: center; max-width: calc(100% - 32px);
+  background: var(--navy); color: #fff; padding: 10px 10px 10px 16px; border-radius: 12px;
+  box-shadow: 0 10px 30px rgba(0,0,0,.3); font-size: 13.5px;
+}
+.toast[hidden] { display: none; }
+.toast button {
+  background: var(--brand); color: #fff; border: 0; border-radius: 8px; padding: 7px 14px;
+  font: 600 13px Inter, "Noto Sans Tamil", sans-serif; cursor: pointer;
+}
+.lang-badge {
+  display: inline-block; font-size: 10px; font-weight: 700; color: #4e5668; background: #eef0f4;
+  border-radius: 4px; padding: 1px 5px; margin-left: 6px; vertical-align: 1px;
+}
+.report { color: #a3abbb; margin-left: 8px; font-size: 11px; }
+.report:hover, .report:focus-visible { color: var(--red); }
+.filter-row { flex-wrap: wrap; }
+.filter-row select { min-width: 110px; }
+.disclaimer {
+  font-size: 11.5px; color: var(--muted); line-height: 1.5;
+  margin: 12px 0 0; padding-top: 10px; border-top: 1px dashed var(--line);
 }

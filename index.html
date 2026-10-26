@@ -4,12 +4,11 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Tamil Nadu Watch</title>
-  <meta name="description" content="Crime, corruption and news in Tamil Nadu, updated every day from public sources.">
+  <meta name="description" content="Crime, corruption and news in Tamil Nadu, updated every hour from public sources.">
   <meta name="theme-color" content="#0b1426">
   <meta property="og:type" content="website">
   <meta property="og:title" content="Tamil Nadu Watch — Real Data. Real Facts.">
   <meta property="og:description" content="Daily dashboard of crime, corruption and news across Tamil Nadu's 38 districts, built only from public sources.">
-  <meta property="og:url" content="https://niyosh.github.io/tnwatch/">
   <meta property="og:image" content="https://niyosh.github.io/tnwatch/assets/og.png">
   <meta name="twitter:card" content="summary_large_image">
   <link rel="icon" href="assets/icon.svg" type="image/svg+xml">
@@ -17,7 +16,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@500;600;700;800&family=Inter:wght@400;500;600;700&family=Noto+Sans+Tamil:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-  <link rel="stylesheet" href="css/style.css?v=3">
+  <link rel="stylesheet" href="css/style.css?v=4">
 </head>
 <body>
 
@@ -95,10 +94,14 @@
 
   <div class="notice" id="notice">
     <i class="fa-solid fa-circle-info"></i>
-    <span data-i18n="notice">Every figure here is collected automatically from public sources. Daily, weekly and monthly counts are
-    <strong>news reports</strong> found in public news feeds, not official police statistics. Official figures come from NCRB.
-    <a href="#sources">See sources</a>.</span>
-    <span class="updated" id="lastUpdated"></span>
+    <span data-i18n="notice">Every figure here is collected automatically from public sources and updated every hour. Daily, weekly and
+    monthly counts are <strong>news reports</strong> found in public English and Tamil news feeds, not official police statistics.
+    Official figures come from NCRB. <a href="#sources">See sources</a>.</span>
+    <span class="notice-actions">
+      <span class="updated" id="lastUpdated"></span>
+      <button type="button" class="share-btn" id="shareSite"><i class="fa-solid fa-share-nodes"></i><span data-i18n="shareBtn">Share</span></button>
+    </span>
+    <span class="stale-msg" id="staleMsg" role="status" hidden></span>
   </div>
 
   <!-- ================= DASHBOARD GRID ================= -->
@@ -147,6 +150,7 @@
         <button data-period="month" class="on" data-i18n="tabMonth">This Month</button>
       </div>
       <table class="stat-table roomy" id="corruptionTable"></table>
+      <p class="disclaimer" data-i18n="corrDisclaimer">These are reports of allegations and official action. Anyone accused is innocent until proven guilty in court.</p>
     </section>
 
     <!-- News -->
@@ -166,11 +170,15 @@
       <div class="card-head">
         <span class="card-icon purple"><i class="fa-solid fa-chart-line"></i></span>
         <div>
-          <h2 data-i18n="trendTitle">30-Day Trend</h2>
-          <p data-i18n="trendSub">News reports per day</p>
+          <h2 data-i18n="trendTitle">Trend</h2>
+          <p id="trendSub">News reports per day</p>
+        </div>
+        <div class="tabs" data-target="trend" role="tablist" data-i18n-label="trendLabel" aria-label="Time range">
+          <button data-period="30d" class="on" data-i18n="trend30">30 days</button>
+          <button data-period="24h" data-i18n="trend24">24 hours</button>
         </div>
       </div>
-      <div class="chart-box tall"><canvas id="trendChart" aria-label="Crime and corruption news reports per day, last 30 days" role="img"></canvas></div>
+      <div class="chart-box tall"><canvas id="trendChart" aria-label="Crime and corruption news reports over time" role="img"></canvas></div>
       <p class="fine" id="trendNote"></p>
     </section>
 
@@ -182,10 +190,16 @@
           <h2 data-i18n="crimeNewsTitle">Latest Crime Reports</h2>
           <p id="crimeNewsSub">Most recent crime stories with district</p>
         </div>
+        <button type="button" class="share-btn ghost" id="shareView"><i class="fa-solid fa-share-nodes"></i><span data-i18n="shareViewBtn">Share</span></button>
       </div>
       <div class="filter-row">
         <select id="districtFilter" data-i18n-label="districtLabel" aria-label="Filter by district"><option value="" data-i18n="allDistricts">All districts</option></select>
         <select id="typeFilter" data-i18n-label="typeLabel" aria-label="Filter by crime type"><option value="" data-i18n="allTypes">All types</option></select>
+        <select id="langFilter" data-i18n-label="langLabel" aria-label="Story language">
+          <option value="" data-i18n="allLanguages">All languages</option>
+          <option value="en" data-i18n="langEnOpt">English</option>
+          <option value="ta" lang="ta">தமிழ்</option>
+        </select>
       </div>
       <ul class="headline-list" id="crimeHeadlines"></ul>
       <button class="more-btn" id="crimeMore" hidden data-i18n="showMore">Show more</button>
@@ -233,9 +247,10 @@
       </div>
       <h3 class="mini" data-i18n="methodTitle">How counting works</h3>
       <ul class="method">
-        <li data-i18n="method1">Stories come from public news feeds every morning at 6:00 IST.</li>
+        <li data-i18n="method1">Stories are collected every hour from public English and Tamil news feeds.</li>
         <li data-i18n="method2">Headlines are sorted into crime types and districts by keywords.</li>
-        <li data-i18n="method3">The same incident covered by several outlets is counted once.</li>
+        <li data-i18n="method3">The same incident covered by several outlets is counted once. English and Tamil stories are matched by type, district and day.</li>
+        <li data-i18n="method5">Mistakes can be reported with the flag on each story and are fixed by hand.</li>
         <li data-i18n="method4">Official yearly totals come from NCRB via data.gov.in.</li>
       </ul>
     </section>
@@ -258,9 +273,14 @@
     <div data-i18n="footer"><strong>Tamil Nadu Watch</strong> — an independent citizen dashboard built only from public sources. Every story links to its original publisher.</div>
   </footer>
 
+  <div class="toast" id="updateToast" role="status" hidden>
+    <i class="fa-solid fa-rotate"></i><span data-i18n="toastText">New data is available.</span>
+    <button type="button" data-i18n="toastBtn">Refresh</button>
+  </div>
+
   <script defer src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
   <script defer src="data/auto.js"></script>
-  <script defer src="js/i18n.js?v=3"></script>
-  <script defer src="js/app.js?v=3"></script>
+  <script defer src="js/i18n.js?v=4"></script>
+  <script defer src="js/app.js?v=4"></script>
 </body>
 </html>

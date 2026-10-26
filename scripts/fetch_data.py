@@ -1,83 +1,151 @@
-"""Fetch every dashboard figure from public sources and write data/auto.js.
+"""Fetch every dashboard figure from public sources and write the files in data/.
 
 Sources
-  - Google News RSS search feeds  -> news list, news-reported crime and corruption counts, district map
-  - data.gov.in API (sources.json) -> official NCRB crime totals, GSDP (needs DATA_GOV_IN_API_KEY)
+  - Google News RSS search feeds, English and Tamil editions
+      -> news lists, news-reported crime and corruption counts, district map, trends
+  - data.gov.in API (scripts/sources.json)
+      -> official NCRB crime totals, GSDP (needs a free DATA_GOV_IN_API_KEY)
 
-Run once a day:  python scripts/fetch_data.py
+Modes
+  hourly  searches covering the last 24 hours (run every hour)
+  full    also the 7- and 30-day searches and the official datasets (run once a day)
+
+Usage:  python scripts/fetch_data.py [--mode hourly|full]
+Fixes to the automatic classification go in scripts/corrections.json.
 Uses only the Python standard library.
 """
 
+import argparse
 import csv
 import json
 import os
 import re
 import sys
 import time
+import unicodedata
 import urllib.parse
 import urllib.request
 import xml.etree.ElementTree as ET
-from datetime import datetime, timedelta, timezone
+from datetime import date, datetime, timedelta, timezone
 from email.utils import parsedate_to_datetime
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-OUT_JS = os.path.join(ROOT, "data", "auto.js")
-HISTORY = os.path.join(ROOT, "data", "history.json")
+DATA = os.path.join(ROOT, "data")
+HISTORY = os.path.join(DATA, "history.json")
 SOURCES = os.path.join(ROOT, "scripts", "sources.json")
+CORRECTIONS = os.path.join(ROOT, "scripts", "corrections.json")
 
 IST = timezone(timedelta(hours=5, minutes=30))
 KEEP_DAYS = 70
-UA = "Mozilla/5.0 (compatible; TamilNaduWatch/1.0; +daily public-data dashboard)"
+UA = "Mozilla/5.0 (compatible; TamilNaduWatch/1.0; +https://github.com/niyosh/tnwatch)"
 
 # ---------------------------------------------------------------------------
-# Classification rules (matched against headlines, case-insensitive)
+# Classification rules
+#
+# Every headline is matched against English and Tamil rules alike (the scripts
+# never overlap). English words match from a word start, so "rape" does not
+# fire on "grape". Tamil words are written as stems so suffixes still match
+# (திருட -> திருட்டு, திருடிய, திருடன்).
 # ---------------------------------------------------------------------------
 CRIME_TYPES = {
-    "Murder": ["murder", "murdered", "hacked to death", "stabbed to death", "bludgeoned", "homicide"],
-    "Theft": ["theft", "stolen", "burglary", "chain snatch", "snatched", "house break"],
-    "Robbery": ["robbery", "robbed", "dacoity", "looted"],
-    "Assault": ["assault", "attacked", "stabbed", "beaten up", "acid attack"],
-    "Cyber Crime": ["cyber", "online fraud", "digital arrest", "phishing", "online scam", "investment scam"],
-    "Women Safety": ["rape", "sexual assault", "molest", "sexual harassment", "pocso", "dowry", "eve teas"],
-    "Narcotics": ["ganja", "narcotic", "ndps", "drug peddl", "methamphetamine", "heroin", "drugs seized"],
+    "Murder": ["murder", "hacked to death", "stabbed to death", "bludgeoned", "homicide", "honour killing",
+               "கொலை"],
+    "Theft": ["theft", "stolen", "burglary", "burgled", "chain snatch", "snatched", "house break",
+              "திருட", "நகை பறிப்பு", "செயின் பறிப்பு", "சங்கிலி பறிப்பு"],
+    "Robbery": ["robbery", "robbed", "dacoity", "looted",
+                "கொள்ளை", "வழிப்பறி"],
+    "Assault": ["assault", "attacked", "stabbed", "beaten up", "acid attack",
+                "தாக்குதல்", "தாக்கிய", "தாக்கப்பட்ட", "அரிவாள் வெட்டு", "அரிவாளால் வெட்ட", "கத்திக்குத்து",
+                "கத்தியால் குத்த"],
+    "Cyber Crime": ["cyber", "online fraud", "digital arrest", "phishing", "online scam", "investment scam",
+                    "சைபர்", "ஆன்லைன் மோசடி", "இணைய மோசடி", "இணையவழி மோசடி", "டிஜிட்டல் அரெஸ்ட்", "டிஜிட்டல் கைது"],
+    "Women Safety": [r"rape\b", "raped", "rapist", "sexual assault", "molest", "sexual harassment", "pocso", "dowry",
+                     "eve teas",
+                     "பாலியல்", "போக்சோ", "போக்ஸோ", "வரதட்சணை", "பலாத்காரம்", "சில்மிஷம்"],
+    "Narcotics": ["ganja", "narcotic", "ndps", "drug peddl", "methamphetamine", r"heroin\b", "drugs seized",
+                  "கஞ்சா", "போதைப்பொருள்", "போதைப் பொருள்", "போதை மாத்திரை", "மெத்தம்பெட்டமைன்", "ஹெராயின்"],
 }
 CRIME_ICONS = {
     "Murder": "fa-skull-crossbones", "Theft": "fa-bag-shopping", "Robbery": "fa-sack-dollar",
     "Assault": "fa-hand-fist", "Cyber Crime": "fa-laptop-code", "Women Safety": "fa-person-dress",
     "Narcotics": "fa-pills",
 }
-# Headlines containing these are not counted as crime (wildlife, accidents, politics)
-CRIME_EXCLUDE = ["elephant", "leopard", "tiger", "bear attack", "dog attack", "accident", "crash",
-                 "attacks cm", "attacks govt", "attacks dmk", "attacks aiadmk", "attacks bjp", "attacks tvk"]
+# Not counted as crime: wildlife, accidents and political statements
+CRIME_EXCLUDE = re.compile(
+    r"\b(?:elephant|leopard|tiger|bear attack|dog attack|stray dog|accident|crash|slams|condemns|flays|lashes out|"
+    r"questions|blames|hits out|takes a dig|law and order|law-and-order|"
+    r"attacks (?:cm|govt|government|centre|dmk|aiadmk|bjp|tvk|congress|stalin|vijay|eps))"
+    r"|யானை|சிறுத்தை|கரடி|காட்டெருமை|தெருநாய்|விபத்த|கண்டனம்|வாக்கு திருட்ட|தாக்கு(?=\s|$|[!.,:'\"’])"
+    r"|கேள்வி|பாய்ச்சல்|சாடல்|விமர்சன|முதல்வரே|ஆட்சியில்|ஆட்சி தான்|அரசு மீது|அறிக்கை|பேட்டி|வலியுறுத்த"
+    r"|கவனம் செலுத்த|சட்டம்.?ஒழுங்|மவுன|ஏன்(?=\s|\?|$)",
+    re.I)
+# "Attempt to murder" is an assault; suicide (தற்கொலை) and death threats are not murders
+ATTEMPT_RE = re.compile(r"\battempt(?:ed)? to murder|\bmurder attempt|\battempted murder|கொலை ?முயற்சி", re.I)
+NOT_MURDER_RE = re.compile(r"தற்கொலை|கொலை ?மிரட்டல்")
 
+CORRUPTION_GATE = ["bribe", "corruption", "corrupt", "dvac", "vigilance", "disproportionate assets", "anti-corruption",
+                   "லஞ்ச", "ஊழல்", "சொத்துக் குவிப்பு", "சொத்து குவிப்பு", "வருமானத்துக்கு அதிகமாக",
+                   "வருமானத்திற்கு அதிகமாக", "முறைகேடு"]
 CORRUPTION_TYPES = {
-    "Bribery Cases": ["bribe", "bribery", "caught accepting", "trap"],
-    "Vigilance Raids & Searches": ["raid", "searches", "search operation"],
-    "Disproportionate Assets": ["disproportionate assets", "da case", "illegal assets"],
-    "Officials Suspended": ["suspended", "suspension"],
-    "Arrests & Chargesheets": ["arrested", "chargesheet", "charge sheet", "convicted", "sentenced"],
+    "Bribery Cases": ["bribe", "caught accepting", "trap", "லஞ்சம்", "லஞ்சப்", "கையும் களவுமாக"],
+    "Vigilance Raids & Searches": ["raid", "searches", "search operation", "சோதனை", "ரெய்டு"],
+    "Disproportionate Assets": ["disproportionate assets", r"da case", "illegal assets", "சொத்துக் குவிப்பு",
+                                "சொத்து குவிப்பு", "வருமானத்துக்கு அதிகமாக", "வருமானத்திற்கு அதிகமாக"],
+    "Officials Suspended": ["suspended", "suspension", "பணியிடை நீக்க", "சஸ்பெண்ட்"],
+    "Arrests & Chargesheets": ["arrested", "chargesheet", "charge sheet", "convicted", "sentenced",
+                               "கைது", "குற்றப்பத்திரிகை", "தண்டனை", "சிறை"],
 }
 CORRUPTION_ICONS = {
     "Bribery Cases": "fa-hand-holding-dollar", "Vigilance Raids & Searches": "fa-magnifying-glass",
     "Disproportionate Assets": "fa-briefcase", "Officials Suspended": "fa-user-slash",
     "Arrests & Chargesheets": "fa-gavel",
 }
-CORRUPTION_GATE = ["bribe", "corruption", "dvac", "vigilance", "disproportionate assets", "anti-corruption"]
-
 DEV_TAGS = {
-    "Infrastructure": ["metro", "highway", "bridge", "airport", "port ", "railway", "flyover"],
-    "Development": ["investment", "industrial", "factory", "plant", "mou", "jobs", "project"],
-    "Policy": ["scheme", "policy", "budget", "assembly", "bill ", "government order", "cabinet"],
+    "Infrastructure": ["metro", "highway", "bridge", "airport", "port ", "railway", "flyover",
+                       "மெட்ரோ", "மேம்பால", "நெடுஞ்சாலை", "விமான நிலைய", "ரயில்"],
+    "Development": ["investment", "industrial", "factory", "plant", "mou", "jobs", "project",
+                    "முதலீடு", "தொழிற்சாலை", "தொழில் பூங்கா", "வேலைவாய்ப்பு", "திட்ட"],
+    "Policy": ["scheme", "policy", "budget", "assembly", "bill ", "government order", "cabinet",
+               "அரசாணை", "சட்டப்பேரவை", "மசோதா", "அமைச்சரவை", "கொள்கை"],
 }
 
-# District names and common spellings / major towns -> district
+# What Google News is asked for (it matches whole words, so inflected forms are listed)
+SEARCH_TERMS = {
+    "en": {
+        "Murder": ["murder", "murdered", "hacked to death", "stabbed to death", "homicide"],
+        "Theft": ["theft", "stolen", "burglary", "chain snatching", "snatched"],
+        "Robbery": ["robbery", "robbed", "dacoity", "looted"],
+        "Assault": ["assault", "attacked", "stabbed", "beaten up", "acid attack"],
+        "Cyber Crime": ["cyber crime", "online fraud", "digital arrest", "phishing", "online scam"],
+        "Women Safety": ["rape", "sexual assault", "molested", "sexual harassment", "POCSO"],
+        "Narcotics": ["ganja", "narcotics", "NDPS", "drug peddler", "methamphetamine"],
+    },
+    "ta": {
+        "Murder": ["கொலை", "வெட்டிக் கொலை", "கொலையாளி"],
+        "Theft": ["திருட்டு", "திருடிய", "நகை பறிப்பு", "செயின் பறிப்பு"],
+        "Robbery": ["கொள்ளை", "கொள்ளையர்கள்", "வழிப்பறி"],
+        "Assault": ["தாக்குதல்", "அரிவாள் வெட்டு", "கத்திக்குத்து"],
+        "Cyber Crime": ["சைபர் கிரைம்", "ஆன்லைன் மோசடி", "டிஜிட்டல் அரெஸ்ட்"],
+        "Women Safety": ["பாலியல் தொல்லை", "பாலியல் வன்கொடுமை", "போக்சோ", "வரதட்சணை"],
+        "Narcotics": ["கஞ்சா", "போதைப்பொருள்", "போதை மாத்திரை"],
+    },
+}
+BIG_CITIES = "(Chennai OR Coimbatore OR Madurai OR Tiruchi OR Salem OR Tirunelveli OR Vellore OR Erode)"
+
+# District names, spellings and big towns -> district
 DISTRICTS = {
-    "Chennai": ["chennai", "madras"], "Tiruvallur": ["tiruvallur", "thiruvallur", "avadi", "ponneri"],
-    "Chengalpattu": ["chengalpattu", "tambaram", "mamallapuram"], "Kanchipuram": ["kanchipuram", "kancheepuram", "sriperumbudur"],
+    "Chennai": ["chennai", "velachery", "mylapore", "adyar", "egmore", "royapettah", "triplicane", "perambur",
+                "kodambakkam", "vadapalani", "guindy", "saidapet", "tondiarpet", "ambattur", "porur", "koyambedu",
+                "madhavaram", "sholinganallur", "thoraipakkam", "kilpauk", "nungambakkam", "washermanpet", "ennore",
+                "tiruvottiyur", "pulianthope", "vyasarpadi", "virugambakkam", "valasaravakkam", "alandur", "mogappair",
+                "villivakkam"],
+    "Tiruvallur": ["tiruvallur", "thiruvallur", "avadi", "ponneri", "tiruttani", "gummidipoondi", "poonamallee"],
+    "Chengalpattu": ["chengalpattu", "tambaram", "mamallapuram", "vandalur", "guduvanchery", "pallavaram", "chromepet",
+                     "kelambakkam", "maraimalai nagar", "perungalathur"], "Kanchipuram": ["kanchipuram", "kancheepuram", "sriperumbudur"],
     "Ranipet": ["ranipet", "arakkonam"], "Vellore": ["vellore", "gudiyatham"], "Tirupathur": ["tirupathur", "tirupattur", "ambur", "vaniyambadi"],
     "Krishnagiri": ["krishnagiri", "hosur"], "Dharmapuri": ["dharmapuri"], "Salem": ["salem", "attur", "mettur"],
     "Tiruvannamalai": ["tiruvannamalai", "thiruvannamalai"], "Villupuram": ["villupuram", "viluppuram", "tindivanam"],
-    "Cuddalore": ["cuddalore", "chidambaram", "neyveli"], "Kallakurichi": ["kallakurichi"], "Nilgiris": ["nilgiris", "ooty", "udhagamandalam", "coonoor"],
+    "Cuddalore": ["cuddalore", "neyveli"], "Kallakurichi": ["kallakurichi"], "Nilgiris": ["nilgiris", "ooty", "udhagamandalam", "coonoor"],
     "Erode": ["erode", "gobichettipalayam"], "Namakkal": ["namakkal", "tiruchengode", "rasipuram"], "Perambalur": ["perambalur"],
     "Ariyalur": ["ariyalur"], "Mayiladuthurai": ["mayiladuthurai"], "Coimbatore": ["coimbatore", "pollachi", "mettupalayam"],
     "Tiruppur": ["tiruppur", "tirupur"], "Karur": ["karur"], "Tiruchirappalli": ["tiruchirappalli", "tiruchi", "trichy"],
@@ -87,15 +155,191 @@ DISTRICTS = {
     "Ramanathapuram": ["ramanathapuram", "rameswaram"], "Tenkasi": ["tenkasi"], "Tirunelveli": ["tirunelveli", "nellai"],
     "Thoothukudi": ["thoothukudi", "tuticorin", "kovilpatti"], "Kanyakumari": ["kanyakumari", "kanniyakumari", "nagercoil"],
 }
-DISTRICT_RE = [(d, re.compile(r"(?<![-\w])(" + "|".join(map(re.escape, names)) + r")\b", re.I)) for d, names in DISTRICTS.items()]
-NOT_TN_RE = re.compile(r"winston|massachusetts|oregon|salem,? (ma|or|nh|va)\b", re.I)
-TN_RE = re.compile(r"\b(tamil nadu|tamilnadu|tn)\b", re.I)
+# Also ordinary English words or foreign places: only the capitalised spelling counts
+CASE_SENSITIVE = {"erode": "Erode", "salem": "Salem"}
+DISTRICTS_TA = {
+    "Chennai": ["சென்னை", "வேளச்சேரி", "மயிலாப்பூர்", "அடையாறு", "எழும்பூர்", "ராயப்பேட்டை", "திருவல்லிக்கேணி",
+                "பெரம்பூர்", "கோடம்பாக்கம்", "வடபழனி", "கிண்டி", "சைதாப்பேட்டை", "தண்டையார்பேட்டை", "அம்பத்தூர்",
+                "போரூர்", "கோயம்பேடு", "மாதவரம்", "சோழிங்கநல்லூர்", "கீழ்ப்பாக்கம்", "நுங்கம்பாக்கம்",
+                "வண்ணாரப்பேட்டை", "எண்ணூர்", "திருவொற்றியூர்", "புளியந்தோப்பு", "வியாசர்பாடி", "விருகம்பாக்கம்",
+                "ஆலந்தூர்", "முகப்பேர்", "வில்லிவாக்கம்"],
+    "Tiruvallur": ["திருவள்ளூர்", "ஆவடி", "பொன்னேரி", "திருத்தணி", "கும்மிடிப்பூண்டி", "பூந்தமல்லி"],
+    "Chengalpattu": ["செங்கல்பட்டு", "தாம்பரம்", "மாமல்லபுரம்", "வண்டலூர்", "கூடுவாஞ்சேரி", "பல்லாவரம்",
+                     "குரோம்பேட்டை", "கேளம்பாக்கம்", "மறைமலைநகர்", "பெருங்களத்தூர்"], "Kanchipuram": ["காஞ்சிபுரம்", "ஸ்ரீபெரும்புதூர்"],
+    "Ranipet": ["ராணிப்பேட்டை", "அரக்கோணம்"], "Vellore": ["வேலூர்", "குடியாத்தம்"],
+    "Tirupathur": ["திருப்பத்தூர்", "ஆம்பூர்", "வாணியம்பாடி"], "Krishnagiri": ["கிருஷ்ணகிரி", "ஓசூர்", "ஒசூர்"],
+    "Dharmapuri": ["தருமபுரி", "தர்மபுரி"], "Salem": ["சேலம்", "மேட்டூர்"], "Tiruvannamalai": ["திருவண்ணாமலை"],
+    "Villupuram": ["விழுப்புரம்", "திண்டிவனம்"], "Cuddalore": ["கடலூர்", "நெய்வேலி"], "Kallakurichi": ["கள்ளக்குறிச்சி"],
+    "Nilgiris": ["நீலகிரி", "உதகை", "குன்னூர்"], "Erode": ["ஈரோடு", "கோபிசெட்டிபாளையம்"],
+    "Namakkal": ["நாமக்கல்", "திருச்செங்கோடு", "ராசிபுரம்"], "Perambalur": ["பெரம்பலூர்"], "Ariyalur": ["அரியலூர்"],
+    "Mayiladuthurai": ["மயிலாடுதுறை"], "Coimbatore": ["கோயம்புத்தூர்", "கோவை", "பொள்ளாச்சி", "மேட்டுப்பாளையம்"],
+    "Tiruppur": ["திருப்பூர்"], "Karur": ["கரூர்"], "Tiruchirappalli": ["திருச்சிராப்பள்ளி", "திருச்சி"],
+    "Thanjavur": ["தஞ்சாவூர்", "தஞ்சை", "கும்பகோணம்"], "Tiruvarur": ["திருவாரூர்"],
+    "Nagapattinam": ["நாகப்பட்டினம்", "நாகை", "வேளாங்கண்ணி"], "Theni": ["தேனி", "போடிநாயக்கனூர்"],
+    "Dindigul": ["திண்டுக்கல்", "(?<![\u0b80-\u0bff])பழனி(?!ச)", "கொடைக்கானல்"], "Madurai": ["மதுரை"],
+    "Pudukkottai": ["புதுக்கோட்டை"], "Virudhunagar": ["விருதுநகர்", "சிவகாசி", "ராஜபாளையம்"],
+    "Sivaganga": ["சிவகங்கை", "காரைக்குடி"], "Ramanathapuram": ["ராமநாதபுரம்", "இராமநாதபுரம்", "ராமேஸ்வரம்"],
+    "Tenkasi": ["தென்காசி"], "Tirunelveli": ["திருநெல்வேலி", "நெல்லை"], "Thoothukudi": ["தூத்துக்குடி", "கோவில்பட்டி"],
+    "Kanyakumari": ["கன்னியாகுமரி", "நாகர்கோவில்", "குமரி"],
+}
+# Court names say where the court sits, not where the crime happened
+COURT_RE = re.compile(r"madras high court|madras hc|சென்னை உயர் ?நீதிமன்ற", re.I)
+TN_RE = re.compile(r"\b(?:tamil ?nadu|tn|dmk|aiadmk|tvk|pmk|vck|mdmk)\b|தமிழ்நாட|தமிழக|திமுக|அதிமுக|தவெக|பாமக|விசிக|மதிமுக", re.I)
+# Salem, Erode etc. also exist abroad; these words only appear in foreign stories
+NOT_TN_RE = re.compile(r"winston|massachusetts|oregon|virginia|illinois|ohio|indiana|dekalb|new hampshire|\bcounty\b|"
+                       r"\bsheriff|salem,? (?:ma|or|nh|va)\b", re.I)
+# A question naming a party is political talk, not a crime report
+PARTY_RE = re.compile(r"\b(?:dmk|aiadmk|tvk|bjp|pmk|congress)\b|திமுக|அதிமுக|தவெக|பாஜக|பாமக|காங்கிரஸ்", re.I)
 
-BIG_CITIES = "(Chennai OR Coimbatore OR Madurai OR Tiruchi OR Salem OR Tirunelveli OR Vellore OR Erode)"
+STOPWORDS = set("""the a an in of for to on at by with and or from as is are was were be been after over into near
+    his her their its this that who what how why case cases police tamil nadu district city said says new two three
+    four five one man men woman women youth held arrested booked
+    அருகே பேர் போலீஸ் போலீசார் காவல் காவல்துறை இளைஞர் பெண் வழக்கு வழக்கில் மற்றும் பரபரப்பு அதிர்ச்சி
+    சம்பவம் வீட்டில் லட்சம் கோடி பவுன் மாவட்டம் நகரில் இருவர் மூவர் உள்ளிட்ட மீது தொடர்பாக நபர் கும்பல்
+    கும்பலால் கொண்ட பிரபல புகார் விசாரணை""".split())
+SPLIT_RE = re.compile(r"[\s\-–—:;,.!?'\"‘’“”()\[\]|/₹…]+")
 
 
-def gnews_url(query):
+def _rx(words):
+    """One regex for a keyword list; English keywords must start at a word start."""
+    return re.compile("|".join((r"\b" + w) if w.isascii() else w for w in words), re.I)
+
+
+def _ta_stem(alias):
+    """Tamil place names change their ending before suffixes: சேலம் -> சேலத்தில், வேலூர் -> வேலூரில்."""
+    if "(" in alias:
+        return alias
+    if alias.endswith("ம்"):
+        return re.escape(alias[:-2]) + "(?:ம்|த்)"
+    if alias.endswith(("்", "ு")):
+        return re.escape(alias[:-1])
+    return re.escape(alias)
+
+
+def _district_rx(english, tamil):
+    parts = []
+    ci = [re.escape(a) for a in english if a not in CASE_SENSITIVE]
+    cs = [re.escape(CASE_SENSITIVE[a]) for a in english if a in CASE_SENSITIVE]
+    if ci:
+        parts.append(r"(?<![-\w])(?i:" + "|".join(ci) + r")\b")
+    if cs:
+        parts.append(r"(?<![-\w])(?:" + "|".join(cs) + r")\b")
+    parts += [_ta_stem(a) for a in tamil]
+    return re.compile("|".join(parts))
+
+
+CRIME_RX = {t: _rx(w) for t, w in CRIME_TYPES.items()}
+CORRUPTION_GATE_RX = _rx(CORRUPTION_GATE)
+CORRUPTION_RX = {t: _rx(w) for t, w in CORRUPTION_TYPES.items()}
+DEV_RX = {t: _rx(w) for t, w in DEV_TAGS.items()}
+DISTRICT_RX = [(d, _district_rx(DISTRICTS[d], DISTRICTS_TA[d])) for d in DISTRICTS]
+PLACE_WORDS = {w for names in DISTRICTS.values() for n in names for w in n.split()}
+PLACE_TA_RX = re.compile("|".join(_ta_stem(a) for names in DISTRICTS_TA.values() for a in names))
+TYPE_WORDS = {re.sub(r"\\b", "", w).lower() for words in [*CRIME_TYPES.values(), *CORRUPTION_TYPES.values()]
+              for w in words if " " not in w}
+
+
+# ---------------------------------------------------------------------------
+# Text helpers
+# ---------------------------------------------------------------------------
+def norm_text(s):
+    """Unicode-normalise and undo old Tamil typing conventions some sites still use:
+    ர் typed as ா் (DinaMani: ஒசூா், போ்) and ூ typed as ுா (Dinamalar: கடலுார்)."""
+    s = unicodedata.normalize("NFC", s or "")
+    return s.replace("ோ்", "ேர்").replace("ொ்", "ெர்").replace("ா்", "ர்").replace("ுா", "ூ")
+
+
+def clean_title(raw):
+    # Google News titles end in " - Source Name"
+    return re.sub(r"\s+-\s+[^-]+$", "", norm_text(raw)).strip()
+
+
+def norm_key(title):
+    return re.sub(r"[^0-9a-z஀-௿ ]", "", norm_text(title).lower())[:80]
+
+
+def script_lang(title):
+    return "ta" if re.search("[஀-௿]", title) else "en"
+
+
+def tokens(title):
+    return {w for w in SPLIT_RE.split(norm_text(title).lower()) if len(w) > 2 and w not in STOPWORDS}
+
+
+def distinct(tk):
+    """Words that identify an incident: not places, crime words or filler."""
+    return {w for w in tk if w not in PLACE_WORDS and not PLACE_TA_RX.match(w) and not any(k in w for k in TYPE_WORDS)}
+
+
+def find_district(text):
+    """The district named earliest in the text."""
+    text = COURT_RE.sub(" ", norm_text(text))
+    best = None
+    for district, rx in DISTRICT_RX:
+        m = rx.search(text)
+        if m and (best is None or m.start() < best[0]):
+            best = (m.start(), district)
+    return best[1] if best else None
+
+
+def strip_special(text):
+    extra = set()
+    if ATTEMPT_RE.search(text):
+        extra.add("Assault")
+        text = ATTEMPT_RE.sub(" ", text)
+    return NOT_MURDER_RE.sub(" ", text), extra
+
+
+def classify(bucket, title):
+    """Return ((category, types), district) for a relevant Tamil Nadu headline, else None."""
+    text = norm_text(title)
+    if NOT_TN_RE.search(text):
+        return None
+    district = find_district(text)
+    if not (district or TN_RE.search(text)):
+        return None
+    if bucket == "crime":
+        if CRIME_EXCLUDE.search(text) or ("?" in text and PARTY_RE.search(text)):
+            return None
+        text, extra = strip_special(text)
+        types = sorted(extra | {t for t, rx in CRIME_RX.items() if rx.search(text)})
+        return (("crime", types), district) if types else None
+    if bucket == "corruption":
+        if not CORRUPTION_GATE_RX.search(text):
+            return None
+        types = [t for t, rx in CORRUPTION_RX.items() if rx.search(text)]
+        return ("corruption", types or ["Other Corruption News"]), district
+    tag = next((t for t, rx in DEV_RX.items() if rx.search(text)), "Development")
+    return ("development", [tag]), district
+
+
+def _day(a):
+    return date.fromisoformat(a["date"]).toordinal()
+
+
+def same_story(a, b, tka=None, tkb=None):
+    """True when two stored stories most likely describe the same incident."""
+    if a["cat"] != b["cat"]:
+        return False
+    tka = tokens(a["title"]) if tka is None else tka
+    tkb = tokens(b["title"]) if tkb is None else tkb
+    days = abs(_day(a) - _day(b))
+    if days <= 2 and len(tka) >= 3 and len(tkb) >= 3 and len(tka & tkb) / len(tka | tkb) >= 0.5:
+        return True
+    if days > 1 or not a["district"] or a["district"] != b["district"] or not set(a["types"]) & set(b["types"]):
+        return False
+    if a.get("lang", "en") != b.get("lang", "en"):
+        return True  # English and Tamil words can't be compared: same type, district and day is the best signal
+    return bool(distinct(tka) & distinct(tkb))
+
+
+# ---------------------------------------------------------------------------
+# News feeds
+# ---------------------------------------------------------------------------
+def gnews_url(query, edition):
     q = urllib.parse.quote(query)
+    if edition == "ta":
+        return f"https://news.google.com/rss/search?q={q}&hl=ta&gl=IN&ceid=IN:ta"
     return f"https://news.google.com/rss/search?q={q}&hl=en-IN&gl=IN&ceid=IN:en"
 
 
@@ -103,171 +347,186 @@ def or_terms(words):
     return "(" + " OR ".join(f'"{w}"' if " " in w else w for w in words) + ")"
 
 
-def build_queries():
-    """(bucket, hint, query) for every feed we read."""
+def build_queries(mode):
+    """(bucket, edition, query) for every search feed read in this mode."""
+    windows = ("1d",) if mode == "hourly" else ("1d", "7d", "30d")
+    corr_en = or_terms(["bribe", "DVAC", "disproportionate assets", "vigilance and anti-corruption", "corruption case"])
+    corr_ta = or_terms(["லஞ்சம்", "லஞ்ச ஒழிப்பு", "சொத்துக் குவிப்பு", "ஊழல் வழக்கு"])
     qs = []
-    for ctype, words in CRIME_TYPES.items():
-        terms = or_terms(words[:5])
-        for when in ("1d", "7d", "30d"):
-            qs.append(("crime", ctype, f'{terms} "Tamil Nadu" when:{when}'))
-            qs.append(("crime", ctype, f"{terms} {BIG_CITIES} when:{when}"))
-    corr = or_terms(["bribe", "DVAC", "disproportionate assets", "vigilance and anti-corruption", "corruption case"])
-    for when in ("1d", "7d", "30d"):
-        qs.append(("corruption", None, f'{corr} "Tamil Nadu" when:{when}'))
-        qs.append(("corruption", None, f"{corr} {BIG_CITIES} when:{when}"))
-    dev = or_terms(["metro", "investment", "scheme", "industrial", "project", "policy"])
-    qs.append(("development", None, f'{dev} "Tamil Nadu" government when:3d'))
+    for when in windows:
+        for words in SEARCH_TERMS["en"].values():
+            qs.append(("crime", "en", f'{or_terms(words)} "Tamil Nadu" when:{when}'))
+            qs.append(("crime", "en", f"{or_terms(words)} {BIG_CITIES} when:{when}"))
+        for words in SEARCH_TERMS["ta"].values():
+            qs.append(("crime", "ta", f"{or_terms(words)} when:{when}"))
+        qs.append(("corruption", "en", f'{corr_en} "Tamil Nadu" when:{when}'))
+        qs.append(("corruption", "en", f"{corr_en} {BIG_CITIES} when:{when}"))
+        qs.append(("corruption", "ta", f"{corr_ta} when:{when}"))
+    dev_when = "1d" if mode == "hourly" else "3d"
+    qs.append(("development", "en",
+               f'{or_terms(["metro", "investment", "scheme", "industrial", "project", "policy"])} "Tamil Nadu" government when:{dev_when}'))
+    qs.append(("development", "ta",
+               f'{or_terms(["முதலீடு", "மெட்ரோ", "தொழிற்சாலை", "புதிய திட்டம்"])} தமிழக அரசு when:{dev_when}'))
     return qs
 
 
 def http_get(url, timeout=30):
     req = urllib.request.Request(url, headers={"User-Agent": UA})
-    with urllib.request.urlopen(req, timeout=timeout) as r:
-        return r.read()
-
-
-def clean_title(raw):
-    # Google News titles end in " - Source Name"
-    return re.sub(r"\s+-\s+[^-]+$", "", raw or "").strip()
-
-
-def norm_key(title):
-    return re.sub(r"[^a-z0-9 ]", "", title.lower())[:80]
-
-
-STOPWORDS = set("""the a an in of for to on at by with and or from as is are was were be been after over into near
-    his her their its this that who what how why case cases police tamil nadu district city said says new two three
-    four five one man men woman women youth held arrested booked""".split())
-
-
-def tokens(title):
-    return {w for w in re.findall(r"[a-z0-9]+", title.lower()) if len(w) > 2 and w not in STOPWORDS}
-
-
-def dedupe(history):
-    """Merge stories that are the same incident reported by different outlets.
-
-    Two headlines in the same category, within 2 days, sharing at least half of their
-    meaningful words are treated as one story (the earliest one is kept)."""
-    arts = history.get("articles", {})
-    kept = []  # (key, article, tokens, day)
-    removed = 0
-    for key, a in sorted(arts.items(), key=lambda kv: kv[1]["ts"]):
-        tk = tokens(a["title"])
-        day = datetime.fromisoformat(a["date"]).toordinal()
-        dup = None
-        if len(tk) >= 3:
-            for k2, a2, tk2, day2 in reversed(kept):
-                if day - day2 > 2:
-                    break
-                if a2["cat"] == a["cat"] and len(tk2) >= 3 and len(tk & tk2) / len(tk | tk2) >= 0.5:
-                    dup = a2
-                    break
-        if dup:
-            dup["types"] = sorted(set(dup["types"]) | set(a["types"]))
-            dup["district"] = dup["district"] or a["district"]
-            dup["also"] = dup.get("also", 1) + 1
-            history.setdefault("merged", {})[key] = a["date"]
-            del arts[key]
-            removed += 1
-        else:
-            kept.append((key, a, tk, day))
-    return removed
-
-
-def match_any(text, words):
-    t = text.lower()
-    return any(w in t for w in words)
-
-
-def find_district(text):
-    for d, rx in DISTRICT_RE:
-        if rx.search(text):
-            return d
-    return None
-
-
-def classify(bucket, hint, title):
-    """Return (category, types) or None when the headline is not relevant."""
-    if NOT_TN_RE.search(title):
-        return None
-    district = find_district(title)
-    if not (district or TN_RE.search(title)):
-        return None
-    if bucket == "crime":
-        types = [t for t, w in CRIME_TYPES.items() if match_any(title, w)]
-        if not types or match_any(title, CRIME_EXCLUDE):
-            return None
-        return ("crime", types), district
-    if bucket == "corruption":
-        if not match_any(title, CORRUPTION_GATE):
-            return None
-        types = [t for t, w in CORRUPTION_TYPES.items() if match_any(title, w)]
-        return ("corruption", types or ["Other Corruption News"]), district
-    tag = next((t for t, w in DEV_TAGS.items() if match_any(title, w)), "Development")
-    return ("development", [tag]), district
-
-
-def fetch_news(history, status):
-    articles = history.setdefault("articles", {})
-    ok = fail = added = 0
-    for bucket, hint, query in build_queries():
+    for attempt in range(2):
         try:
-            root = ET.fromstring(http_get(gnews_url(query)))
-            ok += 1
-        except Exception as e:  # keep going; one feed failing is fine
-            fail += 1
+            with urllib.request.urlopen(req, timeout=timeout) as r:
+                return r.read()
+        except Exception:
+            if attempt:
+                raise
+            time.sleep(3)
+
+
+def load_corrections():
+    if not os.path.exists(CORRECTIONS):
+        return {}
+    with open(CORRECTIONS, encoding="utf-8") as f:
+        return json.load(f)
+
+
+def _hit(a, pattern):
+    p = (pattern or "").lower()
+    return bool(p) and (p in a["title"].lower() or p in (a.get("url") or "").lower())
+
+
+def fetch_news(history, status, mode, corr):
+    """Read the search feeds and store new relevant stories. Returns True if any feed worked."""
+    articles = history.setdefault("articles", {})
+    merged = history.get("merged", {})
+    counts = {"en": [0, 0, 0], "ta": [0, 0, 0]}  # feeds read, feeds failed, new stories
+    for bucket, edition, query in build_queries(mode):
+        c = counts[edition]
+        try:
+            root = ET.fromstring(http_get(gnews_url(query, edition)))
+            c[0] += 1
+        except Exception as e:  # one feed failing is fine
+            c[1] += 1
             print(f"  ! feed failed: {query[:60]}… ({e})", file=sys.stderr)
             continue
         for item in root.iter("item"):
             title = clean_title(item.findtext("title"))
             link = item.findtext("link") or ""
-            src = item.findtext("source") or ""
             try:
                 published = parsedate_to_datetime(item.findtext("pubDate")).astimezone(IST)
             except Exception:
                 continue
             key = norm_key(title)
-            if not key or key in history.get("merged", {}):
+            if not key or key in merged:
                 continue
-            result = classify(bucket, hint, title)
+            if any(_hit({"title": title, "url": link}, p) for p in corr.get("exclude", [])):
+                continue
+            result = classify(bucket, title)
             if not result:
                 continue
             (cat, types), district = result
             prev = articles.get(key)
             if prev:
-                # same story seen through another feed
+                # same headline seen through another feed
                 if prev["cat"] == cat:
                     prev["types"] = sorted(set(prev["types"]) | set(types))
                 elif prev["cat"] == "development":
-                    prev["cat"], prev["types"] = cat, types
+                    prev["cat"], prev["bucket"], prev["types"] = cat, cat, types
                 continue
             articles[key] = {
-                "title": title, "url": link, "source": src, "cat": cat, "types": types,
-                "district": district, "date": published.strftime("%Y-%m-%d"),
+                "title": title, "url": link, "source": item.findtext("source") or "", "cat": cat, "bucket": cat,
+                "types": types,
+                "district": district, "lang": script_lang(title), "date": published.strftime("%Y-%m-%d"),
                 "ts": published.isoformat(),
             }
-            added += 1
+            c[2] += 1
         time.sleep(1.0)  # be polite to the feed server
-    status.append({
-        "name": "Google News RSS (news reports)",
-        "url": "https://news.google.com/",
-        "status": "ok" if ok and not fail else ("partial" if ok else "error"),
-        "detail": f"{ok} feeds read, {fail} failed, {added} new articles",
-    })
+    for edition, name in (("en", "Google News RSS — English"), ("ta", "Google News RSS — Tamil")):
+        ok, fail, added = counts[edition]
+        status.append({
+            "name": name, "url": "https://news.google.com/",
+            "status": "ok" if ok and not fail else ("partial" if ok else "error"),
+            "detail": f"{ok} feeds read, {fail} failed, {added} new stories",
+        })
+    return any(c[0] for c in counts.values())
 
 
+# ---------------------------------------------------------------------------
+# Keeping the stored stories consistent
+# ---------------------------------------------------------------------------
 def prune(history, today):
     cutoff = (today - timedelta(days=KEEP_DAYS)).strftime("%Y-%m-%d")
-    arts = history.get("articles", {})
-    for k in [k for k, a in arts.items() if a["date"] < cutoff]:
-        del arts[k]
-    merged = history.get("merged", {})
-    for k in [k for k, d in merged.items() if d < cutoff]:
-        del merged[k]
+    for store in ("articles", "merged"):
+        items = history.get(store, {})
+        for k in [k for k, v in items.items() if (v["date"] if isinstance(v, dict) else v) < cutoff]:
+            del items[k]
     history.setdefault("since", today.strftime("%Y-%m-%d"))
 
 
+def reclassify(history):
+    """Re-apply the current rules to stored stories, so rule fixes also correct past data."""
+    arts = history.get("articles", {})
+    for key in list(arts):
+        a = arts[key]
+        # "bucket" is the search a story came from; corrections may later change its "cat"
+        result = classify(a.setdefault("bucket", a["cat"]), a["title"])
+        if not result:
+            del arts[key]
+            continue
+        (a["cat"], a["types"]), a["district"] = result
+        a["lang"] = script_lang(a["title"])
+        a["title"] = norm_text(a["title"])
+        new_key = norm_key(a["title"])
+        if new_key != key:
+            del arts[key]
+            if new_key in arts:
+                arts[new_key]["also"] = arts[new_key].get("also", 1) + a.get("also", 1)
+            else:
+                arts[new_key] = a
+
+
+def apply_corrections(history, corr):
+    """Hand-made fixes from scripts/corrections.json win over the automatic rules."""
+    arts = history.get("articles", {})
+    for key in [k for k, a in arts.items() if any(_hit(a, p) for p in corr.get("exclude", []))]:
+        del arts[key]
+    for rule in corr.get("override", []):
+        for a in arts.values():
+            if _hit(a, rule.get("match")):
+                for field in ("cat", "types", "district"):
+                    if field in rule:
+                        a[field] = rule[field]
+
+
+def dedupe(history):
+    """Merge stories about the same incident (the earliest is kept, the rest counted as extra outlets)."""
+    arts = history.get("articles", {})
+    merged = history.setdefault("merged", {})
+    kept = []  # (article, tokens, day), oldest first
+    removed = 0
+    for key, a in sorted(arts.items(), key=lambda kv: kv[1]["ts"]):
+        tk, day = tokens(a["title"]), _day(a)
+        dup = None
+        for a2, tk2, day2 in reversed(kept):
+            if day - day2 > 2:
+                break
+            if same_story(a, a2, tk, tk2):
+                dup = a2
+                break
+        if dup:
+            dup["types"] = sorted(set(dup["types"]) | set(a["types"]))
+            dup["district"] = dup["district"] or a["district"]
+            dup["also"] = dup.get("also", 1) + a.get("also", 1)
+            merged[key] = a["date"]
+            del arts[key]
+            removed += 1
+        else:
+            kept.append((a, tk, day))
+    return removed
+
+
+# ---------------------------------------------------------------------------
+# Counting
+# ---------------------------------------------------------------------------
 def window_counts(arts, cat, types, today, start_back, length, since):
     """Counts per type for days [today-start_back-length+1 .. today-start_back]; None if before history began."""
     end = today - timedelta(days=start_back)
@@ -287,7 +546,7 @@ def window_counts(arts, cat, types, today, start_back, length, since):
 def build_periods(history, cat, types, icons, today):
     arts = list(history.get("articles", {}).values())
     # Feeds return at most ~100 stories per search, so older days are under-sampled until the
-    # script has been running daily. Changes are only shown once both windows were collected live.
+    # script has been running for a while. Changes are only shown once both windows were collected live.
     since = history.get("since", today.strftime("%Y-%m-%d"))
     out = {}
     for name, length in (("today", 1), ("week", 7), ("month", 30)):
@@ -303,20 +562,36 @@ def build_periods(history, cat, types, icons, today):
     return out
 
 
+def hourly_series(arts, now):
+    """Crime and corruption stories per hour (by publication time) over the last 24 hours."""
+    end = now.replace(minute=0, second=0, microsecond=0)
+    slots = [end - timedelta(hours=i) for i in range(23, -1, -1)]
+    rows = [{"hour": s.strftime("%Y-%m-%dT%H:00"), "crime": 0, "corruption": 0} for s in slots]
+    index = {s.strftime("%Y-%m-%dT%H"): i for i, s in enumerate(slots)}
+    for a in arts:
+        i = index.get(a["ts"][:13])
+        if i is not None and a["cat"] in ("crime", "corruption"):
+            rows[i][a["cat"]] += 1
+    return rows
+
+
+# ---------------------------------------------------------------------------
+# Official data (data.gov.in)
+# ---------------------------------------------------------------------------
 def fetch_datagov(history, status):
     cfg = json.load(open(SOURCES, encoding="utf-8"))
     key = os.environ.get("DATA_GOV_IN_API_KEY", "").strip()
     cache = history.setdefault("official", {})
+    entries = []
     for src in cfg.get("datagov", []):
         entry = {"name": src["name"], "url": src.get("page") or "https://www.data.gov.in/"}
+        entries.append(entry)
         if not src.get("resource"):
             entry.update(status="not configured", detail="Add a data.gov.in resource id in scripts/sources.json")
-            status.append(entry)
             continue
         if not key:
             entry.update(status="needs key" if src["id"] not in cache else "cached",
                          detail="Set DATA_GOV_IN_API_KEY (free at data.gov.in) to refresh")
-            status.append(entry)
             continue
         url = (f"https://api.data.gov.in/resource/{src['resource']}?"
                + urllib.parse.urlencode({"api-key": key, "format": "json", "limit": 100}))
@@ -345,40 +620,55 @@ def fetch_datagov(history, status):
             entry.update(status="error", detail="No Tamil Nadu row in this dataset")
         except Exception as e:
             entry.update(status="error" if src["id"] not in cache else "cached", detail=str(e)[:120])
-        status.append(entry)
+    history["official_status"] = entries
+    status.extend(entries)
+
+
+# ---------------------------------------------------------------------------
+def story(a):
+    return {"title": a["title"], "url": a["url"], "source": a["source"], "date": a["date"],
+            "district": a["district"], "tag": a["types"][0], "types": a["types"],
+            "lang": a.get("lang", "en"), "outlets": a.get("also", 1)}
 
 
 def main():
+    ap = argparse.ArgumentParser(description="Fetch dashboard data from public sources.")
+    ap.add_argument("--mode", choices=("hourly", "full", "offline"), default="full",
+                    help="offline re-processes stored stories without fetching (to test rule changes)")
+    mode = ap.parse_args().mode
+
     now = datetime.now(IST)
     today = now.replace(hour=0, minute=0, second=0, microsecond=0)
+    os.makedirs(DATA, exist_ok=True)
     history = json.load(open(HISTORY, encoding="utf-8")) if os.path.exists(HISTORY) else {}
+    corr = load_corrections()
     status = []
 
-    print("Fetching news feeds…")
-    fetch_news(history, status)
-    print("Fetching data.gov.in datasets…")
-    fetch_datagov(history, status)
+    if mode == "offline":
+        status.extend(history.get("news_status", []))
+    else:
+        print(f"Fetching news feeds ({mode})…")
+        if fetch_news(history, status, mode, corr):
+            history["last_success"] = now.isoformat(timespec="minutes")
+        history["news_status"] = list(status)
+    if mode == "full":
+        print("Fetching data.gov.in datasets…")
+        fetch_datagov(history, status)
+    else:
+        status.extend(history.get("official_status", []))
     prune(history, today)
+    reclassify(history)
+    apply_corrections(history, corr)
     print(f"Merged {dedupe(history)} duplicate stories")
 
     arts = sorted(history["articles"].values(), key=lambda a: a["ts"], reverse=True)
     month_start = (today - timedelta(days=29)).strftime("%Y-%m-%d")
+    since = history["since"]
 
     districts = {d: 0 for d in DISTRICTS}
     for a in arts:
         if a["cat"] == "crime" and a["date"] >= month_start and a["district"]:
             districts[a["district"]] += 1
-
-    def latest(cat, n):
-        return [{k: a[k] for k in ("title", "url", "source", "date", "district")} | {"tag": a["types"][0]}
-                for a in arts if a["cat"] == cat][:n]
-
-    news = []
-    for a in arts[:60]:
-        tag = {"crime": "Crime", "corruption": "Corruption"}.get(a["cat"], a["types"][0])
-        news.append({"title": a["title"], "url": a["url"], "source": a["source"], "date": a["date"], "tag": tag})
-
-    since = history.get("since", today.strftime("%Y-%m-%d"))
 
     def daily(cat):
         days = [(today - timedelta(days=i)).strftime("%Y-%m-%d") for i in range(29, -1, -1)]
@@ -386,54 +676,55 @@ def main():
         for a in arts:
             if a["cat"] == cat and a["date"] in counts:
                 counts[a["date"]] += 1
-        # days before the script started running daily are under-sampled by the feeds
+        # days before the script started running are under-sampled by the feeds
         return [{"date": d, "count": counts[d], "partial": d < since} for d in days]
 
-    recent_crime = [{k: a.get(k) for k in ("title", "url", "source", "date", "district")} | {"tag": a["types"][0], "types": a["types"], "outlets": a.get("also", 1)}
-                    for a in arts if a["cat"] == "crime" and a["date"] >= month_start]
-
+    news = [story(a) | {"tag": {"crime": "Crime", "corruption": "Corruption"}.get(a["cat"], a["types"][0])}
+            for a in arts[:40]]
     official = history.get("official", {})
     out = {
         "generatedAt": now.isoformat(timespec="minutes"),
+        "lastSuccess": history.get("last_success"),
+        "mode": mode,  # hourly | full | offline
         "crime": {
             "periods": build_periods(history, "crime", list(CRIME_TYPES), CRIME_ICONS, today),
             "districts": districts,
-            "latest": latest("crime", 6),
-            "recent": recent_crime[:500],
+            "recent": [story(a) for a in arts if a["cat"] == "crime" and a["date"] >= month_start][:600],
             "daily": daily("crime"),
             "official": next((v for v in official.values() if v["use"] == "crime_official"), None),
         },
         "corruption": {
             "periods": build_periods(history, "corruption", list(CORRUPTION_TYPES) + ["Other Corruption News"],
                                      CORRUPTION_ICONS, today),
-            "latest": latest("corruption", 6),
+            "latest": [story(a) for a in arts if a["cat"] == "corruption"][:12],
             "daily": daily("corruption"),
         },
-        "news": news[:8],
+        "hourly": hourly_series(arts, now),
+        "news": news,
         "economy": next((v for v in official.values() if v["use"] == "economy"), None),
         "sources": status,
     }
 
-    with open(HISTORY, "w", encoding="utf-8") as f:
-        json.dump(history, f, ensure_ascii=False, separators=(",", ":"))
-    with open(OUT_JS, "w", encoding="utf-8") as f:
-        f.write("/* AUTO-GENERATED by scripts/fetch_data.py — do not edit by hand. */\n")
-        f.write("window.AUTO_DATA = ")
-        json.dump(out, f, ensure_ascii=False, indent=1)
-        f.write(";\n")
+    def write(name, text):
+        with open(os.path.join(DATA, name), "w", encoding="utf-8") as f:
+            f.write(text)
 
-    # Open data downloads
-    with open(os.path.join(ROOT, "data", "auto.json"), "w", encoding="utf-8") as f:
-        json.dump(out, f, ensure_ascii=False, indent=1)
-    with open(os.path.join(ROOT, "data", "stories.csv"), "w", encoding="utf-8-sig", newline="") as f:
+    write("history.json", json.dumps(history, ensure_ascii=False, separators=(",", ":")))
+    write("auto.js", "/* AUTO-GENERATED by scripts/fetch_data.py — do not edit by hand. */\nwindow.AUTO_DATA = "
+          + json.dumps(out, ensure_ascii=False, indent=1) + ";\n")
+    write("auto.json", json.dumps(out, ensure_ascii=False, indent=1))
+    write("version.json", json.dumps({"generatedAt": out["generatedAt"], "lastSuccess": out["lastSuccess"]}))
+    with open(os.path.join(DATA, "stories.csv"), "w", encoding="utf-8-sig", newline="") as f:
         w = csv.writer(f)
-        w.writerow(["date", "category", "types", "district", "title", "source", "url", "outlets"])
+        w.writerow(["date", "category", "types", "district", "language", "title", "source", "url", "outlets"])
         for a in arts:
-            w.writerow([a["date"], a["cat"], "; ".join(a["types"]), a["district"] or "", a["title"], a["source"], a["url"], a.get("also", 1)])
+            w.writerow([a["date"], a["cat"], "; ".join(a["types"]), a["district"] or "", a.get("lang", "en"),
+                        a["title"], a["source"], a["url"], a.get("also", 1)])
 
     month = out["crime"]["periods"]["month"]
-    print(f"Done. {len(arts)} stored articles; crime reports (30d): {sum(r['count'] for r in month)}; "
-          f"wrote {os.path.relpath(OUT_JS, ROOT)}")
+    by_lang = {lang: sum(1 for a in arts if a.get("lang", "en") == lang) for lang in ("en", "ta")}
+    print(f"Done. {len(arts)} stored stories ({by_lang['en']} English, {by_lang['ta']} Tamil); "
+          f"crime reports (30d): {sum(r['count'] for r in month)}")
     for s in status:
         print(f"  [{s['status']}] {s['name']}: {s['detail']}")
 

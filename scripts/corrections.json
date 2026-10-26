@@ -1,0 +1,13 @@
+{
+  "_help": [
+    "Hand-made fixes for stories the automatic rules got wrong. They apply on the next hourly run, also to stories already stored.",
+    "'match' and 'exclude' entries are pieces of a headline or link (not case-sensitive).",
+    "exclude: drop matching stories completely, e.g. \"Winston-Salem\".",
+    "override: change what a matching story is counted as. Any of cat (crime | corruption | development), types (list) and district can be set.",
+    "Example override: {\"match\": \"lorry driver's murder\", \"types\": [\"Murder\"], \"district\": \"Chennai\"}",
+    "Crime types: Murder, Theft, Robbery, Assault, Cyber Crime, Women Safety, Narcotics.",
+    "Corruption types: Bribery Cases, Vigilance Raids & Searches, Disproportionate Assets, Officials Suspended, Arrests & Chargesheets, Other Corruption News."
+  ],
+  "exclude": [],
+  "override": []
+}

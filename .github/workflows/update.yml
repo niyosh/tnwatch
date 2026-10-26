@@ -1,0 +1,101 @@
+name: Update data and site
+
+# Every hour: fetch the last 24 hours of news, rebuild the numbers and publish.
+# Once a day (00:17 UTC = 05:47 IST): also the 7/30-day searches and official datasets.
+# On a push to main: publish the new code with the latest data (no fetching).
+on:
+  schedule:
+    - cron: "17 * * * *"   # GitHub may start scheduled runs a few minutes late
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: "hourly = last 24 hours only; full = also 7/30-day searches and official data"
+        type: choice
+        options: [full, hourly]
+        default: full
+
+permissions:
+  contents: write   # save data to the data branch
+  pages: write      # publish the site
+  id-token: write
+
+concurrency:
+  group: update-site
+  cancel-in-progress: false
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Choose what to do
+        id: mode
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then mode="${{ inputs.mode }}"
+          elif [ "${{ github.event_name }}" = "push" ]; then mode="deploy"
+          elif [ "$(date -u +%H)" = "00" ]; then mode="full"
+          else mode="hourly"; fi
+          echo "mode=$mode" >> "$GITHUB_OUTPUT"
+          echo "Mode: $mode"
+
+      # The stored stories live on the "data" branch (one commit, replaced every run),
+      # so the main branch only changes when the code does.
+      - name: Restore data
+        run: |
+          mkdir -p data
+          if git fetch --depth=1 origin data; then git archive FETCH_HEAD | tar -x -C data; fi
+
+      - name: Test the classifier
+        run: python scripts/test_classify.py
+
+      - name: Fetch from public sources
+        if: steps.mode.outputs.mode != 'deploy'
+        env:
+          DATA_GOV_IN_API_KEY: ${{ secrets.DATA_GOV_IN_API_KEY }}
+        run: python scripts/fetch_data.py --mode ${{ steps.mode.outputs.mode }}
+
+      - name: Draw the share image
+        run: |
+          pip install --quiet pillow
+          python scripts/make_card.py
+
+      - name: Save data
+        if: steps.mode.outputs.mode != 'deploy'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          cd data
+          git init -q -b data
+          git config user.name "tn-watch-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add -A
+          git commit -q -m "Data $(date -u +%Y-%m-%dT%H:%MZ)"
+          git push -q -f "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" data
+
+      - name: Build the site
+        run: |
+          mkdir -p _site/data
+          cp -r index.html css js assets _site/
+          cp data/auto.js data/auto.json data/version.json data/stories.csv data/card.png _site/data/
+          # previews use the fresh share image; the run id makes apps fetch the new one
+          sed -i "s|assets/og.png|data/card.png?v=${GITHUB_RUN_ID}|g" _site/index.html
+
+      - uses: actions/configure-pages@v5
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+
+      - id: deploy
+        uses: actions/deploy-pages@v4

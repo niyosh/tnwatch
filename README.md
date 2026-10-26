@@ -1,53 +1,85 @@
 # Tamil Nadu Watch — Home Dashboard
 
-Every figure on the site is fetched automatically from public sources. Nothing is typed in by hand.
+Live site: https://niyosh.github.io/tnwatch/ (English) · https://niyosh.github.io/tnwatch/?lang=ta (தமிழ்)
+
+Every figure on the site is fetched automatically from public sources and refreshed every hour. Nothing is typed in by hand.
 
 ## Where the data comes from
 
-| Section | Source | Notes |
+| Section | Source | How often |
 |---|---|---|
-| Crime: Today / This Week / This Month, district map | Google News RSS search feeds | Counts of **news reports**, not official police figures. Headlines are classified by keywords in `scripts/fetch_data.py`. |
-| Crime: Official | NCRB *Crime in India* via the data.gov.in API | Yearly, about a year behind. Needs a free API key. |
-| Corruption | Google News RSS (bribery, DVAC, vigilance, disproportionate assets) | News reports. |
-| Latest news | Google News RSS | Every story links to its original publisher. |
-| Economy (GSDP) | data.gov.in API | Switched off until you add a dataset id in `scripts/sources.json`. The card stays hidden until then. |
+| Crime: Today / Week / Month, district map, trends | Google News RSS searches, English and Tamil editions | Every hour |
+| Corruption | Google News RSS (bribery, DVAC / லஞ்ச ஒழிப்பு, disproportionate assets) | Every hour |
+| Latest news | Google News RSS | Every hour |
+| Crime: Official | NCRB *Crime in India* via the data.gov.in API (needs a free API key) | Checked daily; NCRB publishes yearly |
+| Economy (GSDP) | data.gov.in API — switched off until a dataset id is added to `scripts/sources.json` | Checked daily |
 
-Changes (↑ / ↓ %) only appear once the script has run daily long enough to compare two full periods
-(1 day for "Today", 1 week for "This Week", 30 days for "This Month").
+Daily, weekly and monthly counts are **news reports**, not official police figures. Headlines are sorted into crime types
+and districts by keyword rules in `scripts/fetch_data.py`, which read English and Tamil (Tamil place names are matched as
+stems, so சேலம் also finds சேலத்தில்). The same incident reported by several outlets is counted once: stories in the same
+language that share their key words, or English and Tamil stories with the same type, district and day, are merged
+(the CSV's `outlets` column shows how many were merged).
 
-## Updating the data
+Changes (↑ / ↓ %) appear once the script has collected two full periods (2 days for "Today", 2 weeks for "This Week",
+2 months for "This Month").
+
+## How the hourly update works
+`.github/workflows/update.yml` runs on GitHub Actions (free for public repositories):
+
+- **Every hour (at :17)** — searches the last 24 hours, rebuilds the numbers, draws the share image and publishes the site.
+- **Once a day (05:47 IST)** — also the 7- and 30-day searches and the official data.gov.in datasets.
+- **On every push to `main`** — publishes the new code with the latest data, without fetching.
+
+The stored stories live on the **`data` branch** (a single commit, replaced every run), so the `main` branch only changes
+when the code does. GitHub Pages is published by the workflow (Settings → Pages → Source: GitHub Actions).
+
+GitHub sometimes starts scheduled runs late or skips them at busy times. The site shows "Updated N min ago", turns the
+notice amber when the data is more than 3 hours old, and offers visitors a refresh when newer data is published.
+To refresh by hand: **Actions → Update data and site → Run workflow**.
+
+## Fixing a wrong classification
+Each story has a small flag that opens a pre-filled GitHub issue. To fix it, add a rule to `scripts/corrections.json`
+(the file explains the format) — it applies on the next hourly run, also to stories already stored. If a rule in
+`fetch_data.py` is wrong, fix it and add the headline to `scripts/test_classify.py`; the workflow runs those checks before
+every publish, so a broken rule never reaches the site.
+
 ```
-python scripts/fetch_data.py
+python scripts/test_classify.py
 ```
-This writes `data/auto.js` (what the page shows), `data/history.json` (stored stories used for weekly and monthly counts),
-and the public downloads `data/auto.json` and `data/stories.csv`. Don't edit these files by hand.
-
-The same incident reported by several outlets is counted once: headlines in the same category, within 2 days,
-that share at least half of their meaningful words are merged (the CSV's `outlets` column shows how many were merged).
-
-## Running it every day automatically (free)
-1. Put this folder in a GitHub repository.
-2. In the repository settings, turn on **Pages** (deploy from the main branch, root folder).
-3. Get a free API key at https://data.gov.in (sign up, then "My Account" → API key) and add it under
-   **Settings → Secrets and variables → Actions** as `DATA_GOV_IN_API_KEY`.
-4. The workflow in `.github/workflows/fetch-data.yml` runs every day at 06:00 IST, commits the new data,
-   and GitHub Pages republishes the site. You can also start it with **Actions → Fetch public data → Run workflow**.
 
 ## Running it locally
 ```
+python scripts/fetch_data.py               # full fetch (about 2 minutes); --mode hourly for a quick one
+python scripts/fetch_data.py --mode offline  # re-apply the rules to stored stories without fetching
+python scripts/make_card.py                # share image (needs: pip install pillow)
 python -m http.server 8080
 ```
-Then open http://localhost:8080
+Then open http://localhost:8080. To start from the live data instead of an empty history:
+```
+git fetch origin data && git archive FETCH_HEAD | tar -x -C data
+```
 
-## Adding another official dataset
-Open the dataset on data.gov.in, go to its **API** tab and copy the id after `/resource/`.
+## Official data (NCRB, GSDP)
+Get a free API key at https://data.gov.in (sign up, then "My Account" → API key) and add it under
+**Settings → Secrets and variables → Actions** as `DATA_GOV_IN_API_KEY`.
+
+To add another dataset: open it on data.gov.in, go to its **API** tab and copy the id after `/resource/`.
 Add it to `scripts/sources.json` with `"use": "economy"` (GSDP) or `"use": "crime_official"`.
 The dataset must have one row per state and one column per year.
 
-## Hero image
-Save a wide photo as `assets/hero.jpg` (e.g. 1920×800). Without it a drawn skyline is shown.
+## Sharing
+Share buttons use the phone's share sheet (WhatsApp, Telegram…) or fall back to WhatsApp. Links keep the reader's view:
+`?d=Madurai` opens Madurai's crime stories, `?ty=Murder` a crime type, `?lang=ta` Tamil. The preview image
+(`data/card.png`) is redrawn every hour with the latest numbers.
 
 ## Languages (English / தமிழ்)
 The button in the header switches the interface between English and Tamil. All interface text lives in `js/i18n.js`
-(page text is marked with `data-i18n` in `index.html`). Links can force a language: `?lang=ta` or `?lang=en`.
-News headlines stay in the language they were published in.
+(page text is marked with `data-i18n` in `index.html`). News headlines stay in the language they were published in;
+story lists show the reader's language first.
+
+## When changing CSS or JS
+Bump the `?v=` number on the `css/style.css`, `js/i18n.js` and `js/app.js` links in `index.html`, so browsers don't mix
+cached old files with new ones.
+
+## Hero image
+Save a wide photo as `assets/hero.jpg` (e.g. 1920×800). Without it a drawn skyline is shown.

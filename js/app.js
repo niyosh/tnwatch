@@ -1,5 +1,5 @@
 /* Renders the home dashboard from window.AUTO_DATA (data/auto.js),
-   which scripts/fetch_data.py generates from public sources every day. */
+   which scripts/fetch_data.py rebuilds from public sources every hour. */
 (function () {
   "use strict";
 
@@ -21,10 +21,12 @@
     return y && m && d ? `${d} ${MONTHS[m - 1]} ${y}` : esc(iso);
   };
   const sumCounts = (rows) => (rows || []).reduce((a, r) => a + r.count, 0);
+  const REPO = "https://github.com/niyosh/tnwatch";
+  const params = new URLSearchParams(location.search);
 
   /* Arrow + % with colour. upIsGood decides whether a rise is green or red. null = not enough history yet. */
   function change(pct, upIsGood) {
-    if (pct === null || pct === undefined) return '<span class="flat" title="${t("needsHistory")}">—</span>';
+    if (pct === null || pct === undefined) return `<span class="flat" title="${t("needsHistory")}">—</span>`;
     const n = Number(pct);
     if (n === 0) return '<span class="flat">0%</span>';
     const up = n > 0;
@@ -38,26 +40,58 @@
   heroImg.onload = () => $("#hero").classList.add("has-photo");
   heroImg.src = "assets/hero.jpg";
 
-  if (D.generatedAt) {
-    const time = new Date(D.generatedAt).toLocaleTimeString(lang === "ta" ? "ta-IN" : "en-IN", { hour: "2-digit", minute: "2-digit" });
-    $("#lastUpdated").innerHTML = `<i class="fa-regular fa-clock"></i> ${t("updated", { date: fmtDate(D.generatedAt), time })}`;
-  }
-
   const crime = D.crime || {};
   const corruption = D.corruption || {};
   const official = crime.official;
   const economy = D.economy;
+  const hourly = D.hourly || [];
+  const month = crime.periods?.month || [];
+  const districts = crime.districts || {};
+
+  /* ---------- Freshness: "updated 12 min ago", stale warning, check for newer data ---------- */
+  const lastIso = D.lastSuccess || D.generatedAt;
+  const lastUpdate = new Date(lastIso);
+  function ago(ms) {
+    const m = Math.round(ms / 60000);
+    if (m < 1) return t("justNow");
+    if (m < 60) return t("minAgo", { n: m });
+    const h = Math.round(m / 60);
+    return h < 48 ? t("hoursAgo", { n: h }) : t("daysAgo", { n: Math.round(h / 24) });
+  }
+  function renderFreshness() {
+    if (isNaN(lastUpdate)) return;
+    const age = Date.now() - lastUpdate;
+    const time = lastUpdate.toLocaleTimeString(lang === "ta" ? "ta-IN" : "en-IN", { hour: "2-digit", minute: "2-digit" });
+    const el = $("#lastUpdated");
+    el.innerHTML = `<i class="fa-regular fa-clock"></i> ${t("updatedAgo", { ago: ago(age) })}`;
+    el.title = t("updated", { date: fmtDate(lastIso), time });
+    const stale = age > 3 * 3600e3;
+    $("#notice").classList.toggle("stale", stale);
+    $("#staleMsg").hidden = !stale;
+    $("#staleMsg").textContent = stale ? t("stale", { ago: ago(age) }) : "";
+  }
+  renderFreshness();
+  setInterval(renderFreshness, 60e3);
+
+  async function checkForUpdate() {
+    try {
+      const r = await fetch(`data/version.json?ts=${Date.now()}`, { cache: "no-store" });
+      if (!r.ok) return;
+      const v = await r.json();
+      if (new Date(v.generatedAt) > new Date(D.generatedAt)) $("#updateToast").hidden = false;
+    } catch (e) { /* offline, or opened from disk */ }
+  }
+  setInterval(checkForUpdate, 10 * 60e3);
+  document.addEventListener("visibilitychange", () => { if (!document.hidden) checkForUpdate(); });
+  $("#updateToast button").addEventListener("click", () => window.I18N.reload());
 
   /* ---------- Stat cards (only what the sources provide) ---------- */
   const stats = [];
-  const month = crime.periods?.month || [];
-  stats.push({ icon: "fa-user-ninja", color: "red", value: fmt(sumCounts(month)), label: t("statCrime"), period: t("last30"),
-    change: pctChange(sumCounts(month), null) });
+  stats.push({ icon: "fa-user-ninja", color: "red", value: fmt(sumCounts(month)), label: t("statCrime"), period: t("last30") });
   const women = month.find((r) => r.type === "Women Safety");
   if (women) stats.push({ icon: "fa-person-dress", color: "purple", value: fmt(women.count), label: t("statWomen"), period: t("last30"), change: women.change });
-  stats.push({ icon: "fa-people-group", color: "amber", value: fmt(sumCounts(corruption.periods?.month)), label: t("statCorruption"), period: t("last30"), change: null });
-  const today = crime.periods?.today || [];
-  stats.push({ icon: "fa-bolt", color: "teal", value: fmt(sumCounts(today)), label: t("statToday"), period: t("sinceMidnight"), change: null });
+  stats.push({ icon: "fa-people-group", color: "amber", value: fmt(sumCounts(corruption.periods?.month)), label: t("statCorruption"), period: t("last30") });
+  stats.push({ icon: "fa-bolt", color: "teal", value: fmt(hourly.reduce((a, h) => a + h.crime, 0)), label: t("statRecent"), period: t("last24") });
   if (official?.series?.length) {
     const s = official.series, last = s[s.length - 1], prev = s[s.length - 2];
     stats.push({ icon: "fa-scale-balanced", color: "blue", value: fmt(last.value), label: t("statOfficial"), period: `NCRB ${last.year}`,
@@ -78,7 +112,7 @@
       </div>
     </div>`).join("");
 
-  /* ---------- Crime / corruption tables with tabs ---------- */
+  /* ---------- Crime / corruption tables ---------- */
   function renderTable(el, rows, withTotal) {
     let html = rows.map((r) => `
       <tr>
@@ -109,32 +143,98 @@
     </tbody>`;
   }
 
+  /* ---------- 30-day / 24-hour trend ---------- */
+  if (window.Chart) {
+    Chart.defaults.font.family = "Inter, 'Noto Sans Tamil', system-ui, sans-serif";
+    Chart.defaults.color = "#6b7489";
+  }
+  let trendChart = null;
+  function drawTrend(range) {
+    const is24 = range === "24h";
+    const crimeDaily = crime.daily || [];
+    const corrDaily = corruption.daily || [];
+    $("#trendSub").textContent = is24 ? t("trendSubHour") : t("trendSubDay");
+    $("#trendNote").textContent = is24 ? t("trendNote24") : (crimeDaily.some((d) => d.partial) ? t("trendNote") : "");
+    if (!window.Chart) return;
+    const dayLabel = (iso) => { const [, m, d] = iso.split("-").map(Number); return `${d} ${MONTHS[m - 1]}`; };
+    const labels = is24 ? hourly.map((h) => h.hour.slice(11, 16)) : crimeDaily.map((d) => dayLabel(d.date));
+    const crimeData = is24 ? hourly.map((h) => h.crime) : crimeDaily.map((d) => d.count);
+    const corrData = is24 ? hourly.map((h) => h.corruption) : corrDaily.map((d) => d.count);
+    const bars = is24 ? crimeData.map(() => "rgba(224,51,74,.8)")
+      : crimeDaily.map((d) => (d.partial ? "rgba(224,51,74,.25)" : "rgba(224,51,74,.8)"));
+    if (trendChart) trendChart.destroy();
+    trendChart = new Chart($("#trendChart"), {
+      data: {
+        labels,
+        datasets: [
+          { type: "bar", label: t("crimeReports"), data: crimeData, backgroundColor: bars, borderRadius: 3, order: 1 },
+          { type: "line", label: t("corruptionReports"), data: corrData, borderColor: "#f5b301", backgroundColor: "#f5b301",
+            pointRadius: 2.5, borderWidth: 2, tension: .3, order: 0 }
+        ]
+      },
+      options: {
+        maintainAspectRatio: false,
+        interaction: { mode: "index", intersect: false },
+        plugins: { legend: { position: "top", align: "end", labels: { boxWidth: 12, boxHeight: 8, font: { size: 11 } } } },
+        scales: {
+          x: { grid: { display: false }, ticks: { font: { size: 10 }, maxRotation: 0, autoSkipPadding: 12 } },
+          y: { beginAtZero: true, grid: { color: "#eef0f4" }, ticks: { precision: 0, font: { size: 10 } } }
+        }
+      }
+    });
+  }
+
+  /* ---------- Tabs (crime, corruption, trend) ---------- */
   const SUBS = { today: t("subToday"), week: t("subWeek"), month: t("subMonth"), official: t("subOfficial") };
-  const tables = {
+  const tabTargets = {
     crime: (p) => {
       $("#crimeSub").textContent = SUBS[p];
       p === "official" ? renderOfficial() : renderTable($("#crimeTable"), crime.periods?.[p] || [], true);
     },
-    corruption: (p) => renderTable($("#corruptionTable"), corruption.periods?.[p] || [], false)
+    corruption: (p) => renderTable($("#corruptionTable"), corruption.periods?.[p] || [], false),
+    trend: drawTrend
   };
   document.querySelectorAll(".tabs").forEach((tabs) => {
-    const render = tables[tabs.dataset.target];
+    const render = tabTargets[tabs.dataset.target];
     const buttons = tabs.querySelectorAll("button");
-    const select = (btn) => {
+    buttons.forEach((b) => {
+      b.setAttribute("role", "tab");
+      b.setAttribute("aria-selected", b.classList.contains("on"));
+    });
+    tabs.addEventListener("click", (e) => {
+      const btn = e.target.closest("button");
+      if (!btn) return;
       buttons.forEach((b) => {
         b.classList.toggle("on", b === btn);
         b.setAttribute("aria-selected", b === btn);
       });
       render(btn.dataset.period);
-    };
-    buttons.forEach((b) => b.setAttribute("role", "tab"));
-    tabs.addEventListener("click", (e) => {
-      const btn = e.target.closest("button");
-      if (btn) select(btn);
     });
-    buttons.forEach((b) => b.setAttribute("aria-selected", b.classList.contains("on")));
     render(tabs.querySelector("button.on").dataset.period);
   });
+
+  /* ---------- Story helpers ---------- */
+  const storyLang = (a) => a.lang || "en";
+  const langBadge = (a) => (storyLang(a) === lang ? "" : `<span class="lang-badge">${storyLang(a) === "ta" ? "தமிழ்" : "EN"}</span>`);
+  // Show stories in the reader's language when there are enough of them
+  const preferLang = (items, min) => {
+    const mine = items.filter((a) => storyLang(a) === lang);
+    return mine.length >= min ? mine : items;
+  };
+  function reportLink(a, cat) {
+    const q = new URLSearchParams({
+      title: `Correction: ${a.title}`.slice(0, 120),
+      labels: "correction",
+      body: [`Story: ${a.title}`, `Link: ${a.url}`,
+        `Shown as: ${cat} · ${(a.types || [a.tag]).join(", ")} · ${a.district || "no district"}`,
+        "", "What is wrong?", "", "", "---", "Maintainer: add the fix to scripts/corrections.json"].join("\n")
+    });
+    return `<a class="report" href="${REPO}/issues/new?${esc(q.toString())}" target="_blank" rel="noopener"
+      title="${esc(t("report"))}" aria-label="${esc(t("report"))}"><i class="fa-regular fa-flag"></i></a>`;
+  }
+  const storyMeta = (a, cat) => `<span class="meta">${a.district ? `<b>${esc(term(a.district))}</b> · ` : ""}`
+    + `${esc((a.types || [a.tag]).map(term).join(", "))} · ${esc(a.source)}`
+    + `${a.outlets > 1 ? ` ${t("moreOutlets", { n: a.outlets - 1 })}` : ""} · ${fmtDate(a.date)}${langBadge(a)}${reportLink(a, cat)}</span>`;
 
   /* ---------- District tile map (approximate geographic layout) ---------- */
   const LAYOUT = [
@@ -148,7 +248,6 @@
     ["Tenkasi", 1, 7], ["Tirunelveli", 2, 7], ["Thoothukudi", 3, 7],
     ["Kanyakumari", 2, 8]
   ];
-  const districts = crime.districts || {};
   const maxD = Math.max(1, ...Object.values(districts));
   // Levels relative to the busiest district, since news counts are small numbers
   const level = (n) => (n === 0 ? "x" : n / maxD >= 0.6 ? 3 : n / maxD >= 0.3 ? 2 : n / maxD >= 0.12 ? 1 : 0);
@@ -185,53 +284,90 @@
     if (tile && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); pickDistrict(tile); }
   });
 
-  /* ---------- News + headline lists ---------- */
+  /* ---------- News + corruption lists ---------- */
   const tagIcon = { crime: "fa-handcuffs", corruption: "fa-sack-dollar", development: "fa-industry", policy: "fa-scale-balanced", infrastructure: "fa-train-subway" };
   const tagBg = { crime: "#e0334a", corruption: "#d99a00", development: "#4f8df7", policy: "#8b4cf0", infrastructure: "#22b35e" };
-  $("#newsList").innerHTML = (D.news || []).map((n) => {
+  $("#newsList").innerHTML = preferLang(D.news || [], 4).slice(0, 8).map((n) => {
     const tag = String(n.tag || "").toLowerCase();
     return `<li>
       <span class="thumb" style="background:${tagBg[tag] || "#6b7489"}"><i class="fa-solid ${tagIcon[tag] || "fa-newspaper"}"></i></span>
       <span><a class="news-title" href="${safeUrl(n.url)}" target="_blank" rel="noopener">${esc(n.title)}</a>
-        <small class="src">${esc(n.source)}</small></span>
+        <small class="src">${esc(n.source)}${langBadge(n)}</small></span>
       <span class="news-meta"><time>${fmtDate(n.date)}</time><span class="pill ${esc(tag)}">${esc(term(n.tag))}</span></span>
     </li>`;
   }).join("") || `<li class="empty">${t("noStories")}</li>`;
 
-  function headlines(el, items) {
-    el.innerHTML = (items || []).map((a) => `
-      <li><a href="${safeUrl(a.url)}" target="_blank" rel="noopener">${esc(a.title)}</a>
-        <span class="meta">${a.district ? `<b>${esc(term(a.district))}</b> · ` : ""}${esc(term(a.tag))} · ${esc(a.source)} · ${fmtDate(a.date)}</span></li>`).join("")
-      || `<li class="empty">${t("noStories")}</li>`;
-  }
+  $("#corruptionHeadlines").innerHTML = preferLang(corruption.latest || [], 3).slice(0, 6).map((a) => `
+    <li><a href="${safeUrl(a.url)}" target="_blank" rel="noopener">${esc(a.title)}</a>${storyMeta(a, "corruption")}</li>`).join("")
+    || `<li class="empty">${t("noStories")}</li>`;
 
-  headlines($("#corruptionHeadlines"), corruption.latest);
-
-  /* Crime stories: filter by district / type, paged */
-  const stories = crime.recent || crime.latest || [];
+  /* ---------- Crime stories: filter by district / type / language, paged, shareable ---------- */
+  const stories = crime.recent || [];
   const districtFilter = $("#districtFilter");
   const typeFilter = $("#typeFilter");
+  const langFilter = $("#langFilter");
   const PAGE = 8;
   let shown = PAGE;
+  let autoLang = true; // until the reader picks a language themselves
   Object.keys(districts).sort((a, b) => term(a).localeCompare(term(b), lang)).forEach((d) => {
     districtFilter.insertAdjacentHTML("beforeend", `<option value="${esc(d)}">${esc(term(d))} (${districts[d]})</option>`);
   });
-  (crime.periods?.month || []).forEach((r) => typeFilter.insertAdjacentHTML("beforeend", `<option value="${esc(r.type)}">${esc(term(r.type))}</option>`));
+  month.forEach((r) => typeFilter.insertAdjacentHTML("beforeend", `<option value="${esc(r.type)}">${esc(term(r.type))}</option>`));
+  if (districts[params.get("d")] !== undefined) districtFilter.value = params.get("d");
+  if (month.some((r) => r.type === params.get("ty"))) typeFilter.value = params.get("ty");
+  langFilter.value = stories.filter((a) => storyLang(a) === lang).length >= 3 ? lang : "";
+
+  const filtered = () => {
+    const d = districtFilter.value, ty = typeFilter.value, l = langFilter.value;
+    return stories.filter((a) => (!d || a.district === d) && (!ty || (a.types || [a.tag]).includes(ty)) && (!l || storyLang(a) === l));
+  };
   function renderCrimeStories(reset) {
     if (reset) shown = PAGE;
-    const d = districtFilter.value, ty = typeFilter.value;
-    const list = stories.filter((a) => (!d || a.district === d) && (!ty || (a.types || [a.tag]).includes(ty)));
+    let list = filtered();
+    if (!list.length && autoLang && langFilter.value) {
+      langFilter.value = ""; // nothing in the reader's language for this filter: show every language
+      list = filtered();
+    }
     $("#crimeHeadlines").innerHTML = list.slice(0, shown).map((a) => `
-      <li><a href="${safeUrl(a.url)}" target="_blank" rel="noopener">${esc(a.title)}</a>
-        <span class="meta">${a.district ? `<b>${esc(term(a.district))}</b> · ` : ""}${esc((a.types || [a.tag]).map(term).join(", "))} · ${esc(a.source)}${a.outlets > 1 ? ` ${t("moreOutlets", { n: a.outlets - 1 })}` : ""} · ${fmtDate(a.date)}</span></li>`).join("")
+      <li><a href="${safeUrl(a.url)}" target="_blank" rel="noopener">${esc(a.title)}</a>${storyMeta(a, "crime")}</li>`).join("")
       || `<li class="empty">${t("noMatch")}</li>`;
-    $("#crimeNewsSub").textContent = d || ty ? t("storiesCount", { n: list.length }) : t("crimeNewsSub");
+    $("#crimeNewsSub").textContent = districtFilter.value || typeFilter.value
+      ? t("storiesCount", { n: list.length }) : t("crimeNewsSub");
     $("#crimeMore").hidden = list.length <= shown;
+    // keep the address shareable: ?d=Madurai&ty=Murder
+    const u = new URL(location.href);
+    [["d", districtFilter.value], ["ty", typeFilter.value]].forEach(([k, v]) => (v ? u.searchParams.set(k, v) : u.searchParams.delete(k)));
+    history.replaceState(null, "", u);
   }
   districtFilter.addEventListener("change", () => renderCrimeStories(true));
   typeFilter.addEventListener("change", () => renderCrimeStories(true));
+  langFilter.addEventListener("change", () => { autoLang = false; renderCrimeStories(true); });
   $("#crimeMore").addEventListener("click", () => { shown += PAGE; renderCrimeStories(false); });
   renderCrimeStories(true);
+
+  /* ---------- Sharing (native share sheet, else WhatsApp) ---------- */
+  function shareUrl(base) {
+    const u = new URL(base);
+    u.hash = "";
+    if (lang === "ta") u.searchParams.set("lang", "ta");
+    // a new value every hour makes WhatsApp and others fetch a fresh preview image
+    u.searchParams.set("s", String(D.generatedAt || "").slice(0, 13).replace(/\D/g, ""));
+    return u.toString();
+  }
+  async function share(text, url) {
+    if (navigator.share) {
+      try { await navigator.share({ title: document.title, text, url }); } catch (e) { /* cancelled */ }
+      return;
+    }
+    window.open(`https://wa.me/?text=${encodeURIComponent(`${text} ${url}`)}`, "_blank", "noopener");
+  }
+  $("#shareSite").addEventListener("click", () =>
+    share(t("shareText", { n: fmt(sumCounts(month)) }), shareUrl(location.origin + location.pathname)));
+  $("#shareView").addEventListener("click", () => {
+    const d = districtFilter.value;
+    share(d ? t("shareDistrict", { d: term(d), n: fmt(districts[d] || 0) }) : t("shareText", { n: fmt(sumCounts(month)) }),
+      shareUrl(location.href));
+  });
 
   /* ---------- Sources ---------- */
   const STATUS = { ok: ["ok", "fa-circle-check"], partial: ["warn", "fa-triangle-exclamation"], cached: ["warn", "fa-clock-rotate-left"],
@@ -245,14 +381,16 @@
   }).join("");
 
   /* ---------- Search ---------- */
-  const index = [];
   // District and type names are indexed in both scripts so either can be typed
   const both = (s) => (TERMS_TA[s] ? `${term(s)} (${lang === "ta" ? s : TERMS_TA[s]})` : s);
+  const index = [];
   (D.news || []).forEach((n) => index.push({ kind: term(n.tag || "News"), text: n.title, href: n.url }));
   stories.forEach((a) => index.push({ kind: t("kindCrime"), text: `${a.title}${a.district ? " — " + both(a.district) : ""}`, href: a.url }));
   (corruption.latest || []).forEach((a) => index.push({ kind: t("kindCorruption"), text: a.title, href: a.url }));
-  Object.keys(districts).forEach((d) => index.push({ kind: t("kindDistrict"), text: t("searchDistrict", { d: both(d), n: fmt(districts[d]) }), href: "#crime" }));
-  month.forEach((r) => index.push({ kind: t("kindType"), text: t("searchType", { t: both(r.type), n: fmt(r.count) }), href: "#crime" }));
+  Object.keys(districts).forEach((d) => index.push({ kind: t("kindDistrict"), text: t("searchDistrict", { d: both(d), n: fmt(districts[d]) }),
+    href: `?d=${encodeURIComponent(d)}${lang === "ta" ? "&lang=ta" : ""}` }));
+  month.forEach((r) => index.push({ kind: t("kindType"), text: t("searchType", { t: both(r.type), n: fmt(r.count) }),
+    href: `?ty=${encodeURIComponent(r.type)}${lang === "ta" ? "&lang=ta" : ""}` }));
 
   const input = $("#searchInput");
   const results = $("#searchResults");
@@ -289,39 +427,11 @@
     if (e.target.closest("a")) { $("#mainnav").classList.remove("open"); toggle.setAttribute("aria-expanded", false); }
   });
 
-  /* ---------- 30-day trend ---------- */
-  const crimeDaily = crime.daily || [];
-  const corrDaily = corruption.daily || [];
-  if (crimeDaily.some((d) => d.partial)) {
-    $("#trendNote").textContent = t("trendNote");
+  /* ---------- Where to start: saved scroll after a language switch, else a shared district/type link ---------- */
+  if (!window.I18N.restoreScroll() && (params.get("d") || params.get("ty"))) {
+    const go = () => $("#crimeNews").scrollIntoView({ block: "start" });
+    document.readyState === "complete" ? go() : addEventListener("load", go, { once: true });
   }
-  if (window.Chart && crimeDaily.length) {
-    Chart.defaults.font.family = "Inter, 'Noto Sans Tamil', system-ui, sans-serif";
-    Chart.defaults.color = "#6b7489";
-    const label = (iso) => { const [, m, d] = iso.split("-").map(Number); return `${d} ${MONTHS[m - 1]}`; };
-    new Chart($("#trendChart"), {
-      data: {
-        labels: crimeDaily.map((d) => label(d.date)),
-        datasets: [
-          { type: "bar", label: t("crimeReports"), data: crimeDaily.map((d) => d.count),
-            backgroundColor: crimeDaily.map((d) => (d.partial ? "rgba(224,51,74,.25)" : "rgba(224,51,74,.8)")), borderRadius: 3, order: 1 },
-          { type: "line", label: t("corruptionReports"), data: corrDaily.map((d) => d.count),
-            borderColor: "#f5b301", backgroundColor: "#f5b301", pointRadius: 2.5, borderWidth: 2, tension: .3, order: 0 }
-        ]
-      },
-      options: {
-        maintainAspectRatio: false,
-        interaction: { mode: "index", intersect: false },
-        plugins: { legend: { position: "top", align: "end", labels: { boxWidth: 12, boxHeight: 8, font: { size: 11 } } } },
-        scales: {
-          x: { grid: { display: false }, ticks: { font: { size: 10 }, maxRotation: 0, autoSkipPadding: 12 } },
-          y: { beginAtZero: true, grid: { color: "#eef0f4" }, ticks: { precision: 0, font: { size: 10 } } }
-        }
-      }
-    });
-  }
-
-  window.I18N.restoreScroll();
 
   /* ---------- Economy (only when an official source is connected) ---------- */
   if (!economy?.series?.length) return;
