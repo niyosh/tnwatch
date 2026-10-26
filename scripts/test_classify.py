@@ -185,9 +185,22 @@ def main():
     if years.get(2025, {}).get("Tamil Nadu", {}).get("Outstanding Liabilities") != 955690.5 \
             or years.get(2024, {}).get("Kerala", {}).get("Outstanding Liabilities") != 400000.0:
         official.append(f"liabilities parsed as {years}")
+    # data.gov.in NCRB row: three year columns plus 2022-only population, crime rate and chargesheet rate
+    row = {"sl__no_": "26", "state_ut": "Tamil Nadu", "_2020": "891700", "_2021": "322852", "_2022": "193913",
+           "mid_year_projected_population__in_lakhs___2022_": "767.1",
+           "rate_of_total_cognizable_ipc_crimes__2022_": "252.8", "chargesheeting_rate__2022_": "70.7"}
+    fields = [{"id": "_2020", "name": "2020"}, {"id": "_2021", "name": "2021"}, {"id": "_2022", "name": "2022"},
+              {"id": "rate_of_total_cognizable_ipc_crimes__2022_", "name": "Rate of Total Cognizable IPC Crimes (2022)"}]
+    series, extras = fd.parse_datagov_row(row, fields)
+    if [(p["year"], p["value"]) for p in series] != [("2020", 891700.0), ("2021", 322852.0), ("2022", 193913.0)] \
+            or extras.get("Rate of Total Cognizable IPC Crimes (2022)") != 252.8 \
+            or extras.get("chargesheeting_rate__2022_") != 70.7:
+        official.append(f"data.gov.in row parsed as {series}, {extras}")
+    if [p["value"] for p in fd.first_per_year([{"year": "2022", "value": 1}, {"year": "2022", "value": 2}])] != [1]:
+        official.append("repeated years are not dropped")
     failures += official
 
-    total = len(CASES) + len(DISTRICT_CASES) + len(SAME_STORY_CASES) + len(CASUALTY_CASES) + 3
+    total = len(CASES) + len(DISTRICT_CASES) + len(SAME_STORY_CASES) + len(CASUALTY_CASES) + 5
     if failures:
         print(f"{len(failures)} of {total} checks failed:")
         for f in failures:

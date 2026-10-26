@@ -154,7 +154,16 @@
       <tr><td class="ti"><span><i class="fa-solid fa-scale-balanced"></i></span></td>
         <td>${t("ipcYear", { year: esc(p.year) })}</td><td class="num">${fmt(p.value)}</td>
         <td class="chg">${arr[i + 1] ? change(pctChange(p.value, arr[i + 1].value), false) : ""}</td></tr>`).join("")}
-      <tr><td colspan="4" class="fine">${t("source")}: <a href="${safeUrl(official.url)}" target="_blank" rel="noopener">${esc(official.name)}</a></td></tr>
+      ${Object.entries(official.extras || {}).map(([name, value]) => {
+        const y = (name.match(/(?:19|20)\d\d/) || [""])[0];
+        if (/cogni/i.test(name)) return `<tr><td class="ti"><span><i class="fa-solid fa-users"></i></span></td>
+          <td>${t("crimeRate", { y })}</td><td class="num">${fmtNum(value, 1)}</td><td></td></tr>`;
+        if (/charge.?sheet/i.test(name)) return `<tr><td class="ti"><span><i class="fa-solid fa-file-signature"></i></span></td>
+          <td>${t("chargesheetRate", { y })}</td><td class="num">${fmtNum(value, 1)}%</td><td></td></tr>`;
+        return "";
+      }).join("")}
+      <tr><td colspan="4" class="fine">${s.some((p) => p.year === "2020") ? `${t("covidNote")} ` : ""}${t("source")}:
+        <a href="${safeUrl(official.url)}" target="_blank" rel="noopener">${esc(official.name)}</a></td></tr>
     </tbody>`;
   }
 

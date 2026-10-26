@@ -727,6 +727,44 @@ def road_summary(arts, today, since):
 # ---------------------------------------------------------------------------
 # Official data (data.gov.in)
 # ---------------------------------------------------------------------------
+YEAR_COLUMN = re.compile(r"_*((?:19|20)\d\d(?:[-_]\d\d)?)_*")
+
+
+def parse_datagov_row(row, fields, divide=1.0):
+    """A state's row -> (series of {year, value}, extras).
+
+    Only columns that are just a year ("2021", "_2021") form the series. Other columns that mention a year,
+    such as "Rate of Total Cognizable IPC Crimes (2022)", are kept apart as extras under their names."""
+    names = {f.get("id"): f.get("name") or f.get("id") for f in fields or []}
+    series, extras, seen = [], {}, set()
+    for key, value in row.items():
+        try:
+            number = float(str(value).replace(",", ""))
+        except ValueError:
+            continue
+        name = str(names.get(key, key)).strip()
+        year = YEAR_COLUMN.fullmatch(name) or YEAR_COLUMN.fullmatch(str(key))
+        if year:
+            label = year.group(1).replace("_", "-")
+            if label not in seen:
+                seen.add(label)
+                series.append({"year": label, "value": round(number / float(divide), 2)})
+        elif re.search(r"(19|20)\d\d", name):
+            extras[name] = number
+    series.sort(key=lambda s: s["year"])
+    return series, extras
+
+
+def first_per_year(series):
+    """Drop repeated years (older saved data mixed rate and population columns into the series)."""
+    seen, out = set(), []
+    for point in series:
+        if point["year"] not in seen:
+            seen.add(point["year"])
+            out.append(point)
+    return out
+
+
 def fetch_datagov(history, status):
     cfg = json.load(open(SOURCES, encoding="utf-8"))
     key = os.environ.get("DATA_GOV_IN_API_KEY", "").strip()
@@ -748,21 +786,11 @@ def fetch_datagov(history, status):
             data = json.loads(http_get(url))
             row = next(r for r in data.get("records", [])
                        if any("tamil nadu" in str(v).lower() for v in r.values()))
-            series = []
-            for k, v in row.items():
-                m = re.search(r"(19|20)\d\d(?:[-_]\d\d)?", k)
-                if not m:
-                    continue
-                try:
-                    val = float(str(v).replace(",", ""))
-                except ValueError:
-                    continue
-                series.append({"year": m.group(0).replace("_", "-"), "value": round(val / float(src.get("divide", 1)), 2)})
-            series.sort(key=lambda s: s["year"])
+            series, extras = parse_datagov_row(row, data.get("field"), src.get("divide", 1))
             if not series:
                 raise ValueError("no year columns found")
             cache[src["id"]] = {"use": src["use"], "name": src["name"], "url": entry["url"],
-                                "unit": src.get("unit", ""), "series": series,
+                                "unit": src.get("unit", ""), "series": series, "extras": extras,
                                 "fetched": datetime.now(IST).strftime("%Y-%m-%d")}
             entry.update(status="ok", detail=f"{len(series)} years, latest {series[-1]['year']}")
         except StopIteration:
@@ -841,6 +869,8 @@ def main():
         fetch_datagov(history, status)
     else:
         status.extend(history.get("official_status", []))
+    for saved in history.get("official", {}).values():
+        saved["series"] = first_per_year(saved.get("series", []))
     print("Fetching MoSPI and RBI statistics…")
     stats = fetch_stats(history, status, mode, now)
     history.setdefault("road_since", today.strftime("%Y-%m-%d"))
