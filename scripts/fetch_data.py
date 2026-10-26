@@ -768,7 +768,13 @@ def fetch_datagov(history, status):
         except StopIteration:
             entry.update(status="error", detail="No Tamil Nadu row in this dataset")
         except Exception as e:
-            entry.update(status="error" if src["id"] not in cache else "cached", detail=str(e)[:120])
+            detail = str(e)[:120]
+            if "refused" in detail.lower() or "timed out" in detail.lower():
+                # data.gov.in blocks GitHub's servers; scripts/update_official.ps1 fetches from a computer in India
+                detail = "data.gov.in does not accept connections from GitHub's servers; refreshed from a computer in India"
+                if src["id"] in cache:
+                    detail += f" (last on {cache[src['id']]['fetched']})"
+            entry.update(status="error" if src["id"] not in cache else "cached", detail=detail)
     history["official_status"] = entries
     status.extend(entries)
 
@@ -811,8 +817,9 @@ def fetch_stats(history, status, mode, now):
 
 def main():
     ap = argparse.ArgumentParser(description="Fetch dashboard data from public sources.")
-    ap.add_argument("--mode", choices=("hourly", "full", "offline"), default="full",
-                    help="offline re-processes stored stories without fetching (to test rule changes)")
+    ap.add_argument("--mode", choices=("hourly", "full", "offline", "official"), default="full",
+                    help="offline re-processes stored stories without fetching (to test rule changes); "
+                         "official refreshes only the official datasets (run by scripts/update_official.ps1)")
     mode = ap.parse_args().mode
 
     now = datetime.now(IST)
@@ -822,14 +829,14 @@ def main():
     corr = load_corrections()
     status = []
 
-    if mode == "offline":
+    if mode in ("offline", "official"):
         status.extend(history.get("news_status", []))
     else:
         print(f"Fetching news feeds ({mode})…")
         if fetch_news(history, status, mode, corr):
             history["last_success"] = now.isoformat(timespec="minutes")
         history["news_status"] = list(status)
-    if mode == "full":
+    if mode in ("full", "official"):
         print("Fetching data.gov.in datasets…")
         fetch_datagov(history, status)
     else:

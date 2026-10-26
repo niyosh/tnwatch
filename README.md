@@ -68,8 +68,14 @@ git fetch origin data && git archive FETCH_HEAD | tar -x -C data
 ```
 
 ## Official data (NCRB, GSDP)
-Get a free API key at https://data.gov.in (sign up, then "My Account" → API key) and add it under
-**Settings → Secrets and variables → Actions** as `DATA_GOV_IN_API_KEY`.
+data.gov.in refuses connections from GitHub's servers (they are outside India), so its datasets are refreshed from a
+computer in India instead. NCRB publishes once a year, so once a year is enough; the site keeps the figures in between.
+From the project folder in PowerShell:
+```
+powershell -ExecutionPolicy Bypass -File scripts\update_official.ps1
+```
+It asks for your data.gov.in API key at a hidden prompt (not saved), fetches the official figures, publishes them and
+rebuilds the site. The `DATA_GOV_IN_API_KEY` repository secret is still used if data.gov.in ever accepts GitHub's servers.
 
 To add another dataset: open it on data.gov.in, go to its **API** tab and copy the id after `/resource/`.
 Add it to `scripts/sources.json` with `"use": "economy"` (GSDP) or `"use": "crime_official"`.
