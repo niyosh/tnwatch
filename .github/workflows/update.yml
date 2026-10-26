@@ -20,6 +20,7 @@ permissions:
   contents: write   # save data to the data branch
   pages: write      # publish the site
   id-token: write
+  actions: write    # keep this schedule switched on (last step)
 
 concurrency:
   group: update-site
@@ -99,3 +100,11 @@ jobs:
 
       - id: deploy
         uses: actions/deploy-pages@v4
+
+      # GitHub switches off schedules in repositories with no activity for 60 days;
+      # re-enabling the workflow once a day resets that clock.
+      - name: Keep the schedule switched on
+        if: steps.mode.outputs.mode == 'full'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh api -X PUT "repos/${GITHUB_REPOSITORY}/actions/workflows/update.yml/enable" || echo "could not refresh the schedule"
