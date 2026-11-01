@@ -64,6 +64,20 @@ CASES += [
     ("road", "Road Accidents Mar Festivities Across India; 40 Killed Across MP, Punjab, UP, Tamil Nadu And Bengal", None),
     ("road", "Three dead in crash along Salem Main Road in St. Ann last night", None),
     ("road", "Kerala man dies as car rams lorry near Coimbatore", ("road", {"Car / Van"}, "Coimbatore")),
+    # found in the first week of automatic collection
+    ("road", "சவுதி அரேபியாவில் சாலை விபத்து - குமரி மாவட்டத்தை சேர்ந்த 2 பேர் உயிரிழப்பு", None),
+    ("road", "Road accident fatalities have declined in Chennai, says Commissioner", None),
+    ("crime", "தூத்துக்குடியில் 4 நாட்களில் 7 கொலைகள்; தவெக அரசை கண்டிக்கும் ஸ்டாலின்", None),
+    ("crime", "போக்சோ, போதைப்பொருள் வழக்குகளை விரைந்து விசாரிக்க புதிதாக 30 சிறப்பு நீதிமன்றங்கள் - தமிழக அரசு", None),
+    ("crime", "சென்னை: மணல் கொள்ளையால் அரசுக்கு வருவாய் இழப்பு - லாரி உரிமையாளர்கள் சங்கத்தினர் குற்றச்சாட்டு", None),
+    ("crime", "Tamil Nadu man stabbed to death in Dubai", None),
+    ("crime", "தூத்துக்குடியில் விசிக முன்னாள் நிர்வாகி பாலன் வெட்டிக் கொலை", ("crime", {"Murder"}, "Thoothukudi")),
+    ("corruption", "இலவச பேருந்து பயணம்.. தங்கம் கொடுப்பதும் லஞ்சம்தான்! சிவகங்கையில் சீமான் ஆவேசம்", None),
+    ("corruption", "DMK Ex-Minister Arrested In Rs 100-Crore Bribery Case. MK Stalin Hits Out",
+     ("corruption", {"Arrests & Chargesheets"}, None)),
+    ("corruption", "திமுக மாஜிக்கள் மீதான ஊழல் வழக்குகள்: ஸ்டாலின் மீது தமிழக வெற்றிக் கழகத்தின் ஐடி விங் விமர்சனம்!", None),
+    ("corruption", "நாகை: பெண்ணிடம் ரூ.7,500 லஞ்சம் வாங்கிய கிராம நிர்வாக அதிகாரி கைது",
+     ("corruption", {"Bribery Cases", "Arrests & Chargesheets"}, "Nagapattinam")),
 ]
 
 # (headline, deaths, injured) named in road accident headlines
@@ -78,6 +92,7 @@ CASUALTY_CASES = [
     ("மாத்தூர் அருகே இருசக்கர வாகனங்கள் நேருக்கு நேர் மோதல்: தீயில் கருகி இருவர் பலி", 2, 0),
     ("ஆந்திரம்: சாலை விபத்தில் ஐவா் உயிரிழப்பு", 5, 0),
     ("சுற்றுலா வேன் கவிழ்ந்து 14 பேர் படுகாயம்", 0, 14),
+    ("Tamil Nadu Bus Accidents Kill One, Injure 58", 1, 58),
 ]
 
 # RBI tables, trimmed copies of the real layout

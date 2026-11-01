@@ -75,12 +75,26 @@ CRIME_ICONS = {
 # Not counted as crime: wildlife, accidents and political statements
 CRIME_EXCLUDE = re.compile(
     r"\b(?:elephant|leopard|tiger|bear attack|dog attack|stray dog|accident|crash|slams|condemns|flays|lashes out|"
-    r"questions|blames|hits out|takes a dig|law and order|law-and-order|"
+    r"questions|blames|hits out|takes a dig|law and order|law-and-order|special courts|sand mining|sand smuggling|"
     r"attacks (?:cm|govt|government|centre|dmk|aiadmk|bjp|tvk|congress|stalin|vijay|eps))"
     r"|யானை|சிறுத்தை|கரடி|காட்டெருமை|தெருநாய்|விபத்த|கண்டனம்|வாக்கு திருட்ட|தாக்கு(?=\s|$|[!.,:'\"’])"
     r"|கேள்வி|பாய்ச்சல்|சாடல்|விமர்சன|முதல்வரே|ஆட்சியில்|ஆட்சி தான்|அரசு மீது|அறிக்கை|பேட்டி|வலியுறுத்த"
-    r"|கவனம் செலுத்த|சட்டம்.?ஒழுங்|மவுன|ஏன்(?=\s|\?|$)",
+    r"|கவனம் செலுத்த|சட்டம்.?ஒழுங்|மவுன|ஏன்(?=\s|\?|$)|கண்டிக்கும்|கண்டித்து|கண்டிக்கிற|குற்றச்சாட்டு"
+    r"|சிறப்பு நீதிமன்றங்கள்|மணல் கொள்ளை",
     re.I)
+# Incidents abroad are not Tamil Nadu figures, even when the people are from here
+# ("Road accident in Saudi Arabia: 2 from Kumari district die")
+FOREIGN_SCENE = re.compile(
+    r"\bin (?:saudi(?: arabia)?|dubai|abu dhabi|the uae|uae|kuwait|oman|qatar|bahrain|malaysia|singapore|sri lanka|"
+    r"the us|usa|america|canada|australia|the uk|london|germany)\b"
+    r"|சவுதி|துபாயில்|அபுதாபியில்|குவைத்தில்|ஓமனில்|கத்தாரில்|பஹ்ரைனில்|மலேசியாவில்|சிங்கப்பூரில்|இலங்கையில்"
+    r"|அமெரிக்காவில்|கனடாவில்|ஆஸ்திரேலியாவில்|லண்டனில்", re.I)
+# Political speeches that use the word "bribe" are not corruption cases, unless the headline also reports
+# an actual arrest, raid or case ("Ex-minister arrested in bribery case; Stalin hits out" stays)
+CORRUPTION_EXCLUDE = re.compile(r"\b(?:slams|hits out|takes a dig|jibe)\b|ஆவேசம்|பேச்சு|சாடல்|விமர்சன|கிண்டல்", re.I)
+CORRUPTION_ACTION = re.compile(
+    r"\b(?:arrest|raid|searches|dvac|chargesheet|charge sheet|convicted|sentenced|booked|case registered)"
+    r"|கைது|சோதனை|ரெய்டு|லஞ்ச ஒழிப்பு|வழக்குப் ?பதிவு|வழக்கு பதிவு|குற்றப்பத்திரிகை", re.I)
 # "Attempt to murder" is an assault; suicide (தற்கொலை) and death threats are not murders
 ATTEMPT_RE = re.compile(r"\battempt(?:ed)? to murder|\bmurder attempt|\battempted murder|கொலை ?முயற்சி", re.I)
 NOT_MURDER_RE = re.compile(r"தற்கொலை|கொலை ?மிரட்டல்")
@@ -135,9 +149,11 @@ ROAD_ICONS = {
 # Not road accidents: fires, explosions, drowning, rail, air, landslides, VIP convoys
 ROAD_EXCLUDE = re.compile(
     r"\b(?:fire accident|blaze|cracker|firecracker|fireworks|explosion|blast|boiler|electrocut|drown|landslide|"
-    r"wall collapse|building collapse|train|rail|flight|plane|helicopter|boat|ship|convoy|workplace|quarry)"
+    r"wall collapse|building collapse|train|rail|flight|plane|helicopter|boat|ship|convoy|workplace|quarry|"
+    # statistics, campaigns and enforcement drives are not accidents
+    r"declined|decline in|decreased|increase in|rise in|statistics|awareness|campaign|special drive)"
     r"|தீ விபத்த|பட்டாசு|வெடி விபத்த|வெடித்து|மின்சாரம் தாக்கி|மின் விபத்த|நீரில் மூழ்கி|ரயில்|விமான|படகு"
-    r"|நிலச்சரிவ|சுவர் இடிந்து|கான்வாய்", re.I)
+    r"|நிலச்சரிவ|சுவர் இடிந்து|கான்வாய்|விழிப்புணர்வு|குறைந்துள்ள", re.I)
 # Roundups that add up several states ("40 killed across MP, Punjab, UP, Tamil Nadu…") are not Tamil Nadu figures
 OTHER_STATES = re.compile(
     r"\b(?:across india|nationwide|across the country|madhya pradesh|mp|punjab|uttar pradesh|up|bengal|kerala|karnataka|"
@@ -162,12 +178,12 @@ DEATH_COUNT_RE = [
     re.compile(r"\bdeath toll (?:rises|climbs|goes up|increases|reaches|touches) to " + COUNT_EN, re.I),
     re.compile(r"பலி எண்ணிக்கை\s*(\d{1,3})"),
     re.compile(NOT_GRADE + COUNT_EN + PEOPLE_EN + r"\s+(?:were\s+|are\s+)?" + DEATH_EN, re.I),
-    re.compile(r"\b(?:kills|claims|claimed)\s+" + COUNT_EN, re.I),
+    re.compile(r"\b(?:kills?|claims?|claimed)\s+" + COUNT_EN, re.I),
     re.compile(COUNT_TA + r"\s*(?:\S+\s+){0,2}?" + DEATH_TA),
 ]
 HURT_COUNT_RE = [
     re.compile(NOT_GRADE + COUNT_EN + PEOPLE_EN + r"\s+(?:were\s+|are\s+)?" + HURT_EN, re.I),
-    re.compile(r"\binjures\s+" + COUNT_EN, re.I),
+    re.compile(r"\binjures?\s+" + COUNT_EN, re.I),
     re.compile(COUNT_TA + r"\s*(?:\S+\s+){0,2}?" + HURT_TA),
 ]
 DEATH_RE = re.compile(DEATH_EN + "|" + DEATH_TA, re.I)
@@ -380,18 +396,19 @@ def classify(bucket, title):
     if not (district or TN_RE.search(text)):
         return None
     if bucket == "crime":
-        if CRIME_EXCLUDE.search(text) or ("?" in text and PARTY_RE.search(text)):
+        if CRIME_EXCLUDE.search(text) or FOREIGN_SCENE.search(text) or ("?" in text and PARTY_RE.search(text)):
             return None
         text, extra = strip_special(text)
         types = sorted(extra | {t for t, rx in CRIME_RX.items() if rx.search(text)})
         return (("crime", types), district) if types else None
     if bucket == "corruption":
-        if not CORRUPTION_GATE_RX.search(text):
+        if not CORRUPTION_GATE_RX.search(text) \
+                or (CORRUPTION_EXCLUDE.search(text) and not CORRUPTION_ACTION.search(text)):
             return None
         types = [t for t, rx in CORRUPTION_RX.items() if rx.search(text)]
         return ("corruption", types or ["Other Corruption News"]), district
     if bucket == "road":
-        if ROAD_EXCLUDE.search(text) or not ROAD_GATE_RX.search(text):
+        if ROAD_EXCLUDE.search(text) or FOREIGN_SCENE.search(text) or not ROAD_GATE_RX.search(text):
             return None
         if not district and OTHER_STATES.search(text):
             return None  # a national or other-state story that mentions Tamil Nadu in passing
