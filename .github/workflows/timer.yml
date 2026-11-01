@@ -1,0 +1,36 @@
+name: Hourly timer
+
+# Started at the end of every "Update data and site" run. The job waits on the "hourly" environment,
+# whose wait timer (55 minutes, Settings → Environments → hourly) holds it without using a runner,
+# then starts the next update. To pause the hourly updates, disable this workflow in the Actions tab.
+on:
+  workflow_dispatch:
+
+permissions:
+  actions: write   # start the update workflow
+
+jobs:
+  wait:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    environment:
+      name: hourly
+      deployment: false   # no deployment record every hour
+    steps:
+      - name: Start the update
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          # Without the wait timer this would start an update every minute, so refuse if the job didn't wait.
+          created=$(gh run view "$GITHUB_RUN_ID" -R "$GITHUB_REPOSITORY" --json createdAt --jq .createdAt)
+          waited=$(( ($(date +%s) - $(date -d "$created" +%s)) / 60 ))
+          echo "Waited $waited minutes"
+          if [ "$waited" -lt 30 ]; then
+            echo "::error::The hourly environment has no wait timer, so the next update was not started (the backup schedule still runs)."
+            exit 1
+          fi
+          for try in 1 2 3; do
+            if gh workflow run update.yml -R "$GITHUB_REPOSITORY" -f mode=auto; then exit 0; fi
+            sleep 20
+          done
+          exit 1

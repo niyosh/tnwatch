@@ -34,8 +34,11 @@ Changes (↑ / ↓ %) appear once the script has collected two full periods (2 d
 ## How the hourly update works
 `.github/workflows/update.yml` runs on GitHub Actions (free for public repositories):
 
-- **Every 15 minutes** a quick check runs; it updates only when the published data is over 50 minutes old, so the site
-  refreshes about once an hour. (GitHub starts scheduled runs late and drops many of them — asking often makes up for that.)
+- **Every hour** the update starts itself: each run ends by starting `.github/workflows/timer.yml`, which waits
+  55 minutes on the `hourly` environment's wait timer (Settings → Environments; waiting uses no runner and isn't billed)
+  and then starts the next update. GitHub's own schedule started only 4–5 of 24 hourly runs a day here, so it is now
+  just a backup that restarts the chain if it ever stops. Runs started by the timer or the schedule update only when
+  the published data is over 50 minutes old.
 - **Each update** searches the last 24 hours, rebuilds the numbers, draws the share image and publishes the site.
   When the last **full sweep** is over 20 hours old it also runs the 7- and 30-day searches and refreshes the official data.
 - **On every push to `main`** — publishes the new code with the latest data, without fetching.
@@ -43,9 +46,11 @@ Changes (↑ / ↓ %) appear once the script has collected two full periods (2 d
 The stored stories live on the **`data` branch** (a single commit, replaced every run), so the `main` branch only changes
 when the code does. GitHub Pages is published by the workflow (Settings → Pages → Source: GitHub Actions).
 
-GitHub sometimes starts scheduled runs late or skips them at busy times. The site shows "Updated N min ago", turns the
-notice amber when the data is more than 3 hours old, and offers visitors a refresh when newer data is published.
-To refresh by hand: **Actions → Update data and site → Run workflow**.
+If an update is ever missed, the site shows "Updated N min ago", turns the notice amber when the data is more than
+3 hours old, and offers visitors a refresh when newer data is published.
+To refresh by hand: **Actions → Update data and site → Run workflow**. To pause the hourly updates, disable
+**Hourly timer** in the Actions tab (the backup schedule still updates a few times a day); to restart them, enable it
+and run **Update data and site** once.
 
 ## Fixing a wrong classification
 Each story has a small flag that opens a pre-filled GitHub issue. To fix it, add a rule to `scripts/corrections.json`

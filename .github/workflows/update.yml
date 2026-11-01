@@ -1,13 +1,15 @@
 name: Update data and site
 
-# GitHub runs scheduled workflows late and drops many of them, so the schedule asks every 15 minutes
-# and a quick check updates only when the published data is over 50 minutes old: about once an hour.
+# GitHub starts only a few scheduled runs a day here, so the hourly update keeps itself going: every
+# run ends by starting timer.yml, which waits 55 minutes and then starts this workflow again. The
+# schedule is a backup that restarts the chain if it ever stops. Runs started by the timer or the
+# schedule update only when the published data is over 50 minutes old.
 # "auto" decides the rest: a full sweep (7/30-day searches, official datasets) when the last one is
 # over 20 hours old, otherwise the last-24-hours searches.
 # On a push to main: publish the new code with the latest data (no fetching).
 on:
   schedule:
-    - cron: "7,22,37,52 * * * *"
+    - cron: "37 * * * *"
   push:
     branches: [main]
   workflow_dispatch:
@@ -22,7 +24,7 @@ permissions:
   contents: write   # save data to the data branch
   pages: write      # publish the site
   id-token: write
-  actions: write    # keep this schedule switched on (last step)
+  actions: write    # start the hourly timer, keep the schedule switched on (last job)
 
 concurrency:
   group: update-site
@@ -122,10 +124,27 @@ jobs:
       - id: deploy
         uses: actions/deploy-pages@v4
 
+  # Keeps the hourly chain going, also when this run's update failed or wasn't due.
+  next:
+    needs: [due, update]
+    if: ${{ !cancelled() }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - name: Start the hourly timer
+        run: |
+          waiting=$(gh run list -R "$GITHUB_REPOSITORY" --workflow timer.yml --limit 20 --json status \
+            --jq '[.[] | select(.status == "queued" or .status == "requested" or .status == "pending" or .status == "waiting")] | length')
+          if [ "$waiting" -gt 0 ]; then echo "A timer is already waiting"; exit 0; fi
+          if gh workflow run timer.yml -R "$GITHUB_REPOSITORY"; then echo "The next update starts in about an hour"
+          else echo "::warning::Could not start the hourly timer (is it disabled?)"; fi
+
       # GitHub switches off schedules in repositories with no activity for 60 days;
-      # re-enabling the workflow resets that clock.
+      # re-enabling the workflow resets that clock. Once a day is plenty.
       - name: Keep the schedule switched on
-        if: github.event_name == 'schedule' || steps.mode.outputs.mode == 'full'
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: gh api -X PUT "repos/${GITHUB_REPOSITORY}/actions/workflows/update.yml/enable" || echo "could not refresh the schedule"
+        run: |
+          if [ "$(date -u +%H)" = "00" ] || [ "${{ github.event_name }}" = "schedule" ]; then
+            gh api -X PUT "repos/${GITHUB_REPOSITORY}/actions/workflows/update.yml/enable" || echo "could not refresh the schedule"
+          fi
