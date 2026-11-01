@@ -845,8 +845,9 @@ def fetch_stats(history, status, mode, now):
 
 def main():
     ap = argparse.ArgumentParser(description="Fetch dashboard data from public sources.")
-    ap.add_argument("--mode", choices=("hourly", "full", "offline", "official"), default="full",
-                    help="offline re-processes stored stories without fetching (to test rule changes); "
+    ap.add_argument("--mode", choices=("auto", "hourly", "full", "offline", "official"), default="full",
+                    help="auto picks full when the last full sweep is over 20 hours old, else hourly; "
+                         "offline re-processes stored stories without fetching (to test rule changes); "
                          "official refreshes only the official datasets (run by scripts/update_official.ps1)")
     mode = ap.parse_args().mode
 
@@ -856,6 +857,15 @@ def main():
     history = json.load(open(HISTORY, encoding="utf-8")) if os.path.exists(HISTORY) else {}
     corr = load_corrections()
     status = []
+
+    if mode == "auto":
+        # GitHub starts scheduled runs late, so the daily full sweep goes by age, not by the clock
+        last_full = history.get("last_full")
+        stale = not last_full or (now - datetime.fromisoformat(last_full)).total_seconds() >= 20 * 3600
+        mode = "full" if stale else "hourly"
+        print(f"Auto: {mode} (last full sweep {last_full or 'never'})")
+    if mode == "full":
+        history["last_full"] = now.isoformat(timespec="minutes")
 
     if mode in ("offline", "official"):
         status.extend(history.get("news_status", []))

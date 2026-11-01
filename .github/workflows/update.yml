@@ -1,20 +1,22 @@
 name: Update data and site
 
-# Every hour: fetch the last 24 hours of news, rebuild the numbers and publish.
-# Once a day (00:17 UTC = 05:47 IST): also the 7/30-day searches and official datasets.
+# GitHub runs scheduled workflows late and drops many of them, so the schedule asks every 15 minutes
+# and a quick check updates only when the published data is over 50 minutes old: about once an hour.
+# "auto" decides the rest: a full sweep (7/30-day searches, official datasets) when the last one is
+# over 20 hours old, otherwise the last-24-hours searches.
 # On a push to main: publish the new code with the latest data (no fetching).
 on:
   schedule:
-    - cron: "17 * * * *"   # GitHub may start scheduled runs a few minutes late
+    - cron: "7,22,37,52 * * * *"
   push:
     branches: [main]
   workflow_dispatch:
     inputs:
       mode:
-        description: "hourly = last 24 hours only; full = also 7/30-day searches and official data"
+        description: "auto = update if the data is over 50 min old; full = everything now; hourly = last 24 hours now"
         type: choice
-        options: [full, hourly]
-        default: full
+        options: [auto, full, hourly]
+        default: auto
 
 permissions:
   contents: write   # save data to the data branch
@@ -27,7 +29,27 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  due:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    outputs:
+      run: ${{ steps.check.outputs.run }}
+    steps:
+      - name: Is an update due?
+        id: check
+        run: |
+          if [ "${{ github.event_name }}" = "push" ] || [ "${{ inputs.mode }}" = "full" ] || [ "${{ inputs.mode }}" = "hourly" ]; then
+            echo "run=true" >> "$GITHUB_OUTPUT"; exit 0
+          fi
+          age=$(curl -s --max-time 20 "https://niyosh.github.io/tnwatch/data/version.json?t=$(date +%s)" \
+            | python3 -c "import json, sys, datetime as d; t = d.datetime.fromisoformat(json.load(sys.stdin)['generatedAt']); print(int((d.datetime.now(d.timezone.utc) - t).total_seconds() // 60))" \
+            || echo 9999)
+          echo "The published data is $age minutes old"
+          if [ "$age" -ge 50 ]; then echo "run=true" >> "$GITHUB_OUTPUT"; else echo "run=false" >> "$GITHUB_OUTPUT"; fi
+
   update:
+    needs: due
+    if: needs.due.outputs.run == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 20
     environment:
@@ -45,8 +67,7 @@ jobs:
         run: |
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then mode="${{ inputs.mode }}"
           elif [ "${{ github.event_name }}" = "push" ]; then mode="deploy"
-          elif [ "$(date -u +%H)" = "00" ]; then mode="full"
-          else mode="hourly"; fi
+          else mode="auto"; fi
           echo "mode=$mode" >> "$GITHUB_OUTPUT"
           echo "Mode: $mode"
 
@@ -102,9 +123,9 @@ jobs:
         uses: actions/deploy-pages@v4
 
       # GitHub switches off schedules in repositories with no activity for 60 days;
-      # re-enabling the workflow once a day resets that clock.
+      # re-enabling the workflow resets that clock.
       - name: Keep the schedule switched on
-        if: steps.mode.outputs.mode == 'full'
+        if: github.event_name == 'schedule' || steps.mode.outputs.mode == 'full'
         env:
           GH_TOKEN: ${{ github.token }}
         run: gh api -X PUT "repos/${GITHUB_REPOSITORY}/actions/workflows/update.yml/enable" || echo "could not refresh the schedule"

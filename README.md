@@ -34,8 +34,10 @@ Changes (↑ / ↓ %) appear once the script has collected two full periods (2 d
 ## How the hourly update works
 `.github/workflows/update.yml` runs on GitHub Actions (free for public repositories):
 
-- **Every hour (at :17)** — searches the last 24 hours, rebuilds the numbers, draws the share image and publishes the site.
-- **Once a day (05:47 IST)** — also the 7- and 30-day searches and the official data.gov.in datasets.
+- **Every 15 minutes** a quick check runs; it updates only when the published data is over 50 minutes old, so the site
+  refreshes about once an hour. (GitHub starts scheduled runs late and drops many of them — asking often makes up for that.)
+- **Each update** searches the last 24 hours, rebuilds the numbers, draws the share image and publishes the site.
+  When the last **full sweep** is over 20 hours old it also runs the 7- and 30-day searches and refreshes the official data.
 - **On every push to `main`** — publishes the new code with the latest data, without fetching.
 
 The stored stories live on the **`data` branch** (a single commit, replaced every run), so the `main` branch only changes
