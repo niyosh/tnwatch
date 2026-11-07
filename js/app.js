@@ -791,6 +791,62 @@
     document.readyState === "complete" ? go() : addEventListener("load", go, { once: true });
   }
 
+  /* ---------- Reader support and visit counting (switched on in js/config.js) ---------- */
+  const CFG = window.TNW_CONFIG || {};
+  const upiId = /^[\w.-]{2,256}@[a-z][a-z0-9]{1,63}$/i.test(String(CFG.upiId || "").trim()) ? CFG.upiId.trim() : "";
+  const supportUrl = /^https:\/\/\S+$/i.test(String(CFG.supportUrl || "").trim()) ? CFG.supportUrl.trim() : "";
+  if (upiId || supportUrl) {
+    $("#support").hidden = false;
+    $("#supportBtn").hidden = false;
+    $("#upiBox").hidden = !upiId;
+    if (supportUrl) {
+      $("#supportLink").href = safeUrl(supportUrl);
+      $("#supportLink").hidden = false;
+    }
+  }
+  if (upiId) {
+    // UPI apps read "@" as is; everything else is percent-encoded
+    const q = (v) => encodeURIComponent(v).replace(/%40/g, "@");
+    $("#upiId").textContent = upiId;
+    $("#upiOpen").href = `upi://pay?pa=${q(upiId)}&pn=${q(CFG.upiName || "Tamil Nadu Watch")}&cu=INR&tn=${q("Support Tamil Nadu Watch")}`;
+    const qr = $("#upiQr");
+    qr.alt = t("qrAlt");
+    qr.addEventListener("error", () => { qr.hidden = true; }); // drawn when the site is published; missing on a local copy
+    qr.src = `assets/upi-qr.svg?id=${encodeURIComponent(upiId)}`;
+    const copy = $("#copyUpi span");
+    $("#copyUpi").addEventListener("click", async () => {
+      try {
+        await navigator.clipboard.writeText(upiId);
+        copy.textContent = t("copied");
+      } catch (e) { /* no clipboard access: the ID can still be selected by hand */ }
+      setTimeout(() => { copy.textContent = t("copy"); }, 2000);
+    });
+  }
+
+  // GoatCounter: no cookies, nothing personal stored; not counted on a local copy
+  const counter = /^[a-z0-9-]{2,50}$/i.test(String(CFG.goatcounter || "").trim()) ? CFG.goatcounter.trim().toLowerCase() : "";
+  if (counter && !/^(localhost|127\.0\.0\.1|\[::1\])$/.test(location.hostname)) {
+    // one path per page and language, so share and filter links don't split the counts
+    window.goatcounter = { path: () => location.pathname + (lang === "ta" ? "?lang=ta" : "") };
+    const s = document.createElement("script");
+    s.async = true;
+    s.src = "https://gc.zgo.at/count.v5.js";
+    s.integrity = "sha384-atnOLvQb9t+jTSipvd75X2yginT4PjVbqDdlJAmxMm+wYElFmeR6EmLP5bYeoRVQ";
+    s.crossOrigin = "anonymous";
+    s.dataset.goatcounter = `https://${counter}.goatcounter.com/count`;
+    document.head.appendChild(s);
+    const visits = $("#visits");
+    visits.innerHTML = esc(t("visitsNote"));
+    visits.hidden = false;
+    // the total is public only when "Allow adding visitor counts on your website" is ticked in GoatCounter
+    fetch(`https://${counter}.goatcounter.com/counter/TOTAL.json`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((v) => {
+        if (v && v.count) visits.innerHTML = `<i class="fa-regular fa-eye"></i> ${esc(t("visits", { n: v.count }))} · ${esc(t("visitsNote"))}`;
+      })
+      .catch(() => { /* counter not public yet */ });
+  }
+
   /* ---------- Economy (only when an official source is connected) ---------- */
   if (!economy?.series?.length) return;
   $("#economy").hidden = false;

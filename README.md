@@ -91,6 +91,7 @@ python scripts/test_classify.py
 python scripts/fetch_data.py               # full fetch (about 2 minutes); --mode hourly for a quick one
 python scripts/fetch_data.py --mode offline  # re-apply the rules to stored stories without fetching
 python scripts/make_card.py                # share image (needs: pip install pillow)
+python scripts/make_upi_qr.py              # Support card QR code, if js/config.js has a UPI ID (needs: pip install qrcode)
 python -m http.server 8080
 ```
 Then open http://localhost:8080. To start from the live data instead of an empty history:
@@ -111,6 +112,23 @@ rebuilds the site. The `DATA_GOV_IN_API_KEY` repository secret is still used if 
 To add another dataset: open it on data.gov.in, go to its **API** tab and copy the id after `/resource/`.
 Add it to `scripts/sources.json` with `"use": "economy"` (GSDP) or `"use": "crime_official"`.
 The dataset must have one row per state and one column per year.
+
+## Reader support and visitor counting
+Both are switched on in `js/config.js`. Edit it on github.com (pencil icon), then **Commit changes**; the site updates
+within a few minutes.
+
+- **UPI support**: put your UPI ID in `upiId` (e.g. `"yourname@okaxis"`). A **Support** button appears near the top
+  and a Support card at the end of the page, with a QR code, the ID with a Copy button and, on phones, a
+  "Pay with a UPI app" button. The QR code is drawn from the ID when the site is published (`scripts/make_upi_qr.py`),
+  so no outside code touches the payment details. `supportUrl` can add a Razorpay, Instamojo or Buy Me a Coffee page.
+  Payments go straight to that UPI account; they are gifts, not tax-deductible donations.
+- **Visitor counting**: sign up free at [goatcounter.com](https://www.goatcounter.com/) with a code such as `tnwatch`
+  and put that code in `goatcounter`. Visits then show in your GoatCounter dashboard (no cookies, nothing personal
+  stored; local copies aren't counted). To show the total in the site's footer as well, tick
+  "Allow adding visitor counts on your website" in GoatCounter's settings.
+
+Outside scripts and styles (Chart.js, Font Awesome, GoatCounter) are pinned by integrity hash, so a changed CDN file
+can't alter the page. When upgrading one, update its hash.
 
 ## Sharing
 Share buttons use the phone's share sheet (WhatsApp, Telegram…) or fall back to WhatsApp. Links keep the reader's view:

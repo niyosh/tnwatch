@@ -67,7 +67,14 @@
     bandMoney: "அரசின் நிதி", bandMoneySub: "தமிழ்நாடு அரசின் கடனும் புதிதாக வாங்கும் கடனும் — RBI தரவு",
     bandMore: "மேலும் செய்திகள் & ஆதாரங்கள்", bandMoreSub: "பிற செய்திகள், ஒவ்வொரு எண்ணும் எங்கிருந்து வருகிறது, பதிவிறக்கங்கள்",
     method7: "நீதிமன்றத் தீர்ப்புகள், மேல்முறையீடுகள், அரசியல்வாதிகளின் அறிக்கைகள் புதிய சம்பவங்களாகக் கணக்கிடப்படுவதில்லை.",
-    mineChoose: "உங்கள் மாவட்டத்தைத் தேர்ந்தெடுக்கவும்…"
+    mineChoose: "உங்கள் மாவட்டத்தைத் தேர்ந்தெடுக்கவும்…",
+    supportBtn: "ஆதரவு", supportTitle: "தமிழ்நாடு வாட்ச்-ஐ ஆதரியுங்கள்",
+    supportSub: "சுயாதீனமானது, விளம்பரமில்லாதது, ஒவ்வொரு மணி நேரமும் புதுப்பிக்கப்படுகிறது",
+    supportWhy: "இந்தத் தளத்தில் விளம்பரங்கள் இல்லை. இது உங்களுக்குப் பயனுள்ளதாக இருந்தால், UPI மூலம் ஒரு சிறு தொகை இதைத் தொடர்ந்து இயங்கவும் வளரவும் உதவும். எந்தத் தொகையும் உதவும்.",
+    supportNote: "பணம் நேரடியாகத் தள உரிமையாளரின் UPI கணக்குக்குச் செல்லும். இது அன்பளிப்பு; வரி விலக்கு பெறும் நன்கொடை அல்ல.",
+    otherPay: "பிற வழிகளில் செலுத்த",
+    scanNote: "எந்த UPI செயலியிலும் (Google Pay, PhonePe, Paytm, BHIM) ஸ்கேன் செய்யவும், அல்லது இந்த UPI ID-க்குச் செலுத்தவும்:",
+    copyBtn: "நகலெடு", payApp: "UPI செயலியில் செலுத்த"
   };
   const ATTR_TA = {
     mineLabel: "உங்கள் மாவட்டம்",
@@ -135,7 +142,9 @@
       mineSubD: "News reports from the last 30 days · saved on this device only",
       mineCrime: "Crime reports", mineRank: "{p} of {n} districts (1 = most)", mineWeek: "{n} this week",
       mineWomen: "Women safety reports", mineRoad: "Road deaths", mineRoadReports: "in {n} accident reports",
-      mineAll: "All crime stories from {d}", mineNone: "No reports from {d} in the last 30 days."
+      mineAll: "All crime stories from {d}", mineNone: "No reports from {d} in the last 30 days.",
+      copy: "Copy", copied: "Copied", qrAlt: "UPI QR code to support Tamil Nadu Watch",
+      visits: "{n} visits", visitsNote: "Visits are counted with GoatCounter, without cookies or personal data."
     },
     ta: {
       updated: "புதுப்பிக்கப்பட்டது: {date}, {time}",
@@ -194,7 +203,9 @@
       mineSubD: "கடந்த 30 நாட்களின் செய்திகள் · இந்தச் சாதனத்தில் மட்டுமே சேமிக்கப்பட்டது",
       mineCrime: "குற்றச் செய்திகள்", mineRank: "{n} மாவட்டங்களில் {p}-வது (1 = அதிகம்)", mineWeek: "இந்த வாரம் {n}",
       mineWomen: "பெண்கள் பாதுகாப்புச் செய்திகள்", mineRoad: "சாலை விபத்து உயிரிழப்புகள்", mineRoadReports: "{n} விபத்துச் செய்திகளில்",
-      mineAll: "{d} — அனைத்துக் குற்றச் செய்திகள்", mineNone: "கடந்த 30 நாட்களில் {d} மாவட்டத்திலிருந்து செய்திகள் இல்லை."
+      mineAll: "{d} — அனைத்துக் குற்றச் செய்திகள்", mineNone: "கடந்த 30 நாட்களில் {d} மாவட்டத்திலிருந்து செய்திகள் இல்லை.",
+      copy: "நகலெடு", copied: "நகலெடுக்கப்பட்டது", qrAlt: "தமிழ்நாடு வாட்ச்-ஐ ஆதரிக்க UPI QR குறியீடு",
+      visits: "{n} பார்வைகள்", visitsNote: "பார்வைகள் GoatCounter மூலம், குக்கீகளோ தனிப்பட்ட தகவல்களோ இல்லாமல் கணக்கிடப்படுகின்றன."
     }
   };
 

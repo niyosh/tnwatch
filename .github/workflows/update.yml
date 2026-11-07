@@ -91,7 +91,7 @@ jobs:
 
       - name: Draw the share image
         run: |
-          pip install --quiet pillow
+          pip install --quiet pillow qrcode
           python scripts/make_card.py
 
       - name: Save data
@@ -114,6 +114,8 @@ jobs:
           cp data/auto.js data/auto.json data/version.json data/stories.csv data/card.png _site/data/
           # previews use the fresh share image; the run id makes apps fetch the new one
           sed -i "s|assets/og.png|data/card.png?v=${GITHUB_RUN_ID}|g" _site/index.html
+          # the Support card's UPI QR code, from the UPI ID in js/config.js (none drawn while it's empty)
+          python scripts/make_upi_qr.py _site/assets/upi-qr.svg
 
       - uses: actions/configure-pages@v5
 
