@@ -101,6 +101,10 @@ OTHER_STATE_IN = re.compile(
     r"\b(?:attacked|murdered|killed|hacked|stabbed|robbed|assaulted|raped|molested|kidnapped|abducted|dies|died|injured)"
     r"\s+(?:\w+\s+){0,3}?in\s+(?:karnataka|kerala|andhra(?: pradesh)?|telangana|bengaluru|bangalore|hyderabad|mumbai|"
     r"delhi|puducherry|pondicherry|goa|maharashtra)\b", re.I)
+# ... or a crime named after another state's place, with no district here ("…, Bengaluru Lawyer Murder")
+OTHER_PLACE_CRIME = re.compile(
+    r"\b(?:bengaluru|bangalore|karnataka|kerala|andhra|hyderabad|telangana|mumbai|delhi|puducherry|pondicherry)"
+    r"\s+(?:\w+\s+){0,2}(?:murder|rape|robbery|theft|attack|assault|killing|stabbing)", re.I)
 # "Sexually assaulting a child" is a crime against women and children, not a plain assault
 SEXUAL_ASSAULT_RE = re.compile(r"\bsexual(?:ly)? assault\w*", re.I)
 # Incidents abroad are not Tamil Nadu figures, even when the people are from here
@@ -403,9 +407,10 @@ def find_district(text):
     return best[1] if best else None
 
 
-def other_state(text):
+def other_state(text, district):
     lead = OTHER_STATE_LEAD.match(text)
-    return bool(lead and not find_district(lead.group(0))) or bool(OTHER_STATE_IN.search(text))
+    return bool(lead and not find_district(lead.group(0))) or bool(OTHER_STATE_IN.search(text)) \
+        or (not district and bool(OTHER_PLACE_CRIME.search(text)))
 
 
 def strip_special(text):
@@ -430,7 +435,7 @@ def classify(bucket, title):
     if bucket == "crime":
         if CORRUPTION_WORDS_RX.search(text):
             return classify("corruption", title)  # a bribe or a scam by officials is counted under corruption
-        if CRIME_EXCLUDE.search(text) or FOREIGN_SCENE.search(text) or other_state(text) \
+        if CRIME_EXCLUDE.search(text) or FOREIGN_SCENE.search(text) or other_state(text, district) \
                 or QUOTE_ATTRIBUTION.search(text) or ("?" in text and PARTY_RE.search(text)):
             return None
         text, extra = strip_special(text)
@@ -443,7 +448,7 @@ def classify(bucket, title):
         types = [t for t, rx in CORRUPTION_RX.items() if rx.search(text)]
         return ("corruption", types or ["Other Corruption News"]), district
     if bucket == "road":
-        if ROAD_EXCLUDE.search(text) or FOREIGN_SCENE.search(text) or other_state(text) \
+        if ROAD_EXCLUDE.search(text) or FOREIGN_SCENE.search(text) or other_state(text, district) \
                 or not ROAD_GATE_RX.search(text):
             return None
         if not district and OTHER_STATES.search(text):
