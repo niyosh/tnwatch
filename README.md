@@ -40,14 +40,17 @@ Most important first, so phones show what matters before the reader has to scrol
 
 1. **Headline numbers**: latest crime reports (24 h), road deaths, women's safety, inflation, then the 30-day crime and
    corruption counts, debt and borrowing. Each opens its section.
-2. **Top Stories**: the six most important reports of the last two days, ranked by how many outlets covered the incident,
+2. **Your District**: readers pick their district once (saved in their own browser only, nothing is sent anywhere). It then
+   shows first: its crime reports and rank among the 38 districts, women's safety reports, road deaths and its latest
+   stories. Its stories get a pin in every list, it is outlined on both maps, and its news moves up in Top Stories.
+3. **Top Stories**: the six most important reports of the last two days, ranked by how many outlets covered the incident,
    how serious it is (murder and crimes against women and children above theft; deaths in a crash) and how recent it is,
    with at most three per section.
-3. **Safety**: crime (types, district map, districts with most reports, latest stories, trend), then road accidents.
-4. **Cost of living**: inflation in Tamil Nadu vs India and what is getting costlier.
-5. **Corruption**: counts by type and the latest cases.
-6. **Government money**: debt and this year's borrowing.
-7. **More news & sources**: other news, where every number comes from, downloads.
+4. **Safety**: crime (types, district map, districts with most reports, latest stories, trend), then road accidents.
+5. **Cost of living**: inflation in Tamil Nadu vs India and what is getting costlier.
+6. **Corruption**: counts by type and the latest cases.
+7. **Government money**: debt and this year's borrowing.
+8. **More news & sources**: other news, where every number comes from, downloads.
 
 The order lives in `index.html`; the ranking rules for Top Stories are in `js/app.js` (search "Top stories").
 

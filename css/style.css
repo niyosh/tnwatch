@@ -284,8 +284,8 @@ mark { background: #fff1a8; border-radius: 2px; }
 .headline-list, .source-list { list-style: none; margin: 0; padding: 0; }
 .headline-list li { padding: 9px 0; border-bottom: 1px solid var(--line); }
 .headline-list li:last-child { border-bottom: 0; }
-.headline-list a { font-size: 13px; line-height: 1.4; display: block; }
-.headline-list a:hover { color: var(--brand); }
+.headline-list li > a { font-size: 13px; line-height: 1.4; display: block; }
+.headline-list li > a:hover { color: var(--brand); }
 .headline-list .meta { display: block; font-size: 11.5px; color: var(--muted); margin-top: 3px; }
 .headline-list .meta b { color: var(--ink); font-weight: 600; }
 .source-list li {
@@ -590,6 +590,37 @@ html[lang="ta"] .band h2 { font-size: 17.5px; }
 .top-item .meta { display: block; font-size: 11.5px; color: var(--muted); margin-top: 4px; }
 .top-item .meta b { color: var(--ink); font-weight: 600; }
 .top-item .casualty { margin-top: 3px; }
+
+/* your district: a one-line chooser until a district is picked, then its numbers and latest stories */
+#mine .card-head { align-items: center; margin-bottom: 0; }
+#mine.chosen .card-head { margin-bottom: 14px; }
+#mine:not(.chosen) { background: linear-gradient(90deg, #e9f8f7, #fff 55%); }
+#mineSelect {
+  flex: 0 0 auto; min-width: 220px; margin-left: auto; padding: 8px 10px;
+  font: 600 13px Inter, "Noto Sans Tamil", sans-serif; color: var(--ink);
+  border: 1px solid #b9dcd9; border-radius: 8px; background: #fff; cursor: pointer;
+}
+#mineSelect:focus-visible { outline: 2px solid var(--teal); outline-offset: 1px; }
+.mine-body { display: grid; grid-template-columns: minmax(230px, .7fr) minmax(0, 2fr); gap: 18px; align-items: start; }
+.mine-body[hidden] { display: none; }
+.mine-body .kpis { grid-template-columns: 1fr; margin: 0; }
+.mine-body .kpi {
+  display: grid; grid-template-columns: auto 1fr; gap: 0 12px; align-items: center; text-align: left; padding: 10px 14px;
+}
+.mine-body .kpi b { grid-row: span 2; min-width: 48px; font-size: 26px; }
+.mine-body .kpi span { font-weight: 600; color: var(--ink); font-size: 12.5px; }
+.mine-body .kpi small { font-size: 11.5px; color: var(--muted); }
+.mine-body .more-btn { margin-top: 6px; }
+.kpi.purple { background: #f1ebfe; } .kpi.purple b { color: #6233c9; }
+.kind-tag { display: block; font-size: 10.5px; font-weight: 700; letter-spacing: .3px; text-transform: uppercase; margin-bottom: 2px; }
+.kind-tag.crime { color: #c8213a; } .kind-tag.road { color: #b5471a; } .kind-tag.corruption { color: #b86e00; }
+.meta b.mine { color: #128c86; }
+.meta b.mine i { font-size: 10px; }
+.tile.mine { outline-color: var(--ink); z-index: 1; }
+@media (max-width: 760px) {
+  #mineSelect { flex: 1 1 100%; min-width: 0; margin-left: 0; }
+  .mine-body { grid-template-columns: 1fr; }
+}
 
 /* districts with most crime reports: click to see their stories */
 .rank-list li.pick { cursor: pointer; border-radius: 6px; padding-left: 4px; padding-right: 4px; }

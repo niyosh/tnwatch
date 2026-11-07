@@ -66,9 +66,11 @@
     bandAccount: "ஊழல்", bandAccountSub: "லஞ்ச வழக்குகள், லஞ்ச ஒழிப்புச் சோதனைகள், அதிகாரிகள் மீதான நடவடிக்கைகள்",
     bandMoney: "அரசின் நிதி", bandMoneySub: "தமிழ்நாடு அரசின் கடனும் புதிதாக வாங்கும் கடனும் — RBI தரவு",
     bandMore: "மேலும் செய்திகள் & ஆதாரங்கள்", bandMoreSub: "பிற செய்திகள், ஒவ்வொரு எண்ணும் எங்கிருந்து வருகிறது, பதிவிறக்கங்கள்",
-    method7: "நீதிமன்றத் தீர்ப்புகள், மேல்முறையீடுகள், அரசியல்வாதிகளின் அறிக்கைகள் புதிய சம்பவங்களாகக் கணக்கிடப்படுவதில்லை."
+    method7: "நீதிமன்றத் தீர்ப்புகள், மேல்முறையீடுகள், அரசியல்வாதிகளின் அறிக்கைகள் புதிய சம்பவங்களாகக் கணக்கிடப்படுவதில்லை.",
+    mineChoose: "உங்கள் மாவட்டத்தைத் தேர்ந்தெடுக்கவும்…"
   };
   const ATTR_TA = {
+    mineLabel: "உங்கள் மாவட்டம்",
     searchPh: "குற்றங்கள், மாவட்டங்கள், அதிகாரிகள், செய்திகளைத் தேடுங்கள்…",
     searchLabel: "தேடல்", menuLabel: "மெனுவைத் திற",
     districtLabel: "மாவட்ட வாரியாக வடிகட்டு", typeLabel: "குற்ற வகை வாரியாக வடிகட்டு", langLabel: "செய்தி மொழி",
@@ -127,7 +129,13 @@
       lastYearSame: "Same period last year", thisYearVs: "This year {p}%", lastYearTotal: "Whole of last year",
       nextAuction: "Next auction", recentAuctions: "Recent auctions",
       borrowNote: "Market loans only (State Development Loans); amounts accepted at each weekly auction.",
-      busiestDistricts: "Most crime reports, last 30 days"
+      busiestDistricts: "Most crime reports, last 30 days",
+      mineTitle: "Your District", mineTitleD: "Your District: {d}",
+      mineSub: "Choose your district to see its news first. Saved on this device only.",
+      mineSubD: "News reports from the last 30 days · saved on this device only",
+      mineCrime: "Crime reports", mineRank: "{p} of {n} districts (1 = most)", mineWeek: "{n} this week",
+      mineWomen: "Women safety reports", mineRoad: "Road deaths", mineRoadReports: "in {n} accident reports",
+      mineAll: "All crime stories from {d}", mineNone: "No reports from {d} in the last 30 days."
     },
     ta: {
       updated: "புதுப்பிக்கப்பட்டது: {date}, {time}",
@@ -180,7 +188,13 @@
       lastYearSame: "கடந்த ஆண்டு இதே காலம்", thisYearVs: "இந்த ஆண்டு {p}%", lastYearTotal: "கடந்த முழு ஆண்டு",
       nextAuction: "அடுத்த ஏலம்", recentAuctions: "சமீபத்திய ஏலங்கள்",
       borrowNote: "சந்தைக் கடன்கள் மட்டும் (மாநில வளர்ச்சிக் கடன்கள்); ஒவ்வொரு வார ஏலத்திலும் ஏற்கப்பட்ட தொகை.",
-      busiestDistricts: "அதிக குற்றச் செய்திகள் — கடந்த 30 நாட்கள்"
+      busiestDistricts: "அதிக குற்றச் செய்திகள் — கடந்த 30 நாட்கள்",
+      mineTitle: "உங்கள் மாவட்டம்", mineTitleD: "உங்கள் மாவட்டம்: {d}",
+      mineSub: "உங்கள் மாவட்டத்தின் செய்திகளை முதலில் பார்க்க, அதைத் தேர்ந்தெடுக்கவும். இந்தச் சாதனத்தில் மட்டுமே சேமிக்கப்படும்.",
+      mineSubD: "கடந்த 30 நாட்களின் செய்திகள் · இந்தச் சாதனத்தில் மட்டுமே சேமிக்கப்பட்டது",
+      mineCrime: "குற்றச் செய்திகள்", mineRank: "{n} மாவட்டங்களில் {p}-வது (1 = அதிகம்)", mineWeek: "இந்த வாரம் {n}",
+      mineWomen: "பெண்கள் பாதுகாப்புச் செய்திகள்", mineRoad: "சாலை விபத்து உயிரிழப்புகள்", mineRoadReports: "{n} விபத்துச் செய்திகளில்",
+      mineAll: "{d} — அனைத்துக் குற்றச் செய்திகள்", mineNone: "கடந்த 30 நாட்களில் {d} மாவட்டத்திலிருந்து செய்திகள் இல்லை."
     }
   };
 

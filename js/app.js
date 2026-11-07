@@ -56,6 +56,12 @@
   const debt = D.debt;
   const borrowing = D.borrowing;
 
+  /* The reader's own district: chosen in "Your District", remembered on this device only */
+  const MINE_KEY = "tnw-district";
+  let mine = "";
+  try { mine = localStorage.getItem(MINE_KEY) || ""; } catch (e) { /* private mode */ }
+  if (districts[mine] === undefined) mine = "";
+
   /* ---------- Freshness: "updated 12 min ago", stale warning, check for newer data ---------- */
   const lastIso = D.lastSuccess || D.generatedAt;
   const lastUpdate = new Date(lastIso);
@@ -275,7 +281,10 @@
     return `<a class="report" href="${REPO}/issues/new?${esc(q.toString())}" target="_blank" rel="noopener"
       title="${esc(t("report"))}" aria-label="${esc(t("report"))}"><i class="fa-regular fa-flag"></i></a>`;
   }
-  const storyMeta = (a, cat) => `<span class="meta">${a.district ? `<b>${esc(term(a.district))}</b> · ` : ""}`
+  // the reader's own district gets a pin
+  const placeTag = (d) => (d ? `<b${d === mine ? ' class="mine"' : ""}>${d === mine ? '<i class="fa-solid fa-location-dot"></i> ' : ""}`
+    + `${esc(term(d))}</b> · ` : "");
+  const storyMeta = (a, cat) => `<span class="meta">${placeTag(a.district)}`
     + `${esc((a.types || [a.tag]).map(term).join(", "))} · ${esc(a.source)}`
     + `${a.outlets > 1 ? ` ${t("moreOutlets", { n: a.outlets - 1 })}` : ""} · ${fmtDate(a.date)}${langBadge(a)}${reportLink(a, cat)}</span>`;
 
@@ -345,9 +354,12 @@
     </li>`;
   }).join("") || `<li class="empty">${t("noStories")}</li>`;
 
-  $("#corruptionHeadlines").innerHTML = preferLang(corruption.latest || [], 3).slice(0, 8).map((a) => `
-    <li><a href="${safeUrl(a.url)}" target="_blank" rel="noopener">${esc(a.title)}</a>${storyMeta(a, "corruption")}</li>`).join("")
-    || `<li class="empty">${t("noStories")}</li>`;
+  function renderCorruptionNews() {
+    $("#corruptionHeadlines").innerHTML = preferLang(corruption.latest || [], 3).slice(0, 8).map((a) => `
+      <li><a href="${safeUrl(a.url)}" target="_blank" rel="noopener">${esc(a.title)}</a>${storyMeta(a, "corruption")}</li>`).join("")
+      || `<li class="empty">${t("noStories")}</li>`;
+  }
+  renderCorruptionNews();
 
   /* ---------- Crime stories: filter by district / type / language, paged, shareable ---------- */
   const stories = crime.recent || [];
@@ -441,7 +453,7 @@
   $("#roadDistricts").innerHTML = Object.entries(roadDistricts)
     .filter(([, v]) => v.reports)
     .sort((a, b) => b[1].deaths - a[1].deaths || b[1].reports - a[1].reports).slice(0, 10)
-    .map(([d, v]) => `<li><span>${esc(term(d))}</span><b>${fmt(v.deaths)}</b><small>${t("reportsCount", { n: fmt(v.reports) })}</small></li>`).join("")
+    .map(([d, v]) => `<li data-d="${esc(d)}"><span>${esc(term(d))}</span><b>${fmt(v.deaths)}</b><small>${t("reportsCount", { n: fmt(v.reports) })}</small></li>`).join("")
     || `<li class="empty">${t("noStories")}</li>`;
   renderRoadNews();
 
@@ -456,9 +468,9 @@
     + (cat === "road" ? Math.min(a.deaths || 0, 5) + (a.injured >= 5 ? 1 : 0) : 0)
     + (cat === "corruption" ? 2 : 0)
     + (a.date === today ? 1 : 0)
-    + (storyLang(a) === lang ? 0.5 : 0);
+    + (storyLang(a) === lang ? 0.5 : 0)
+    + (mine && a.district === mine ? 1.5 : 0); // news from the reader's district moves up, big state news still leads
   const KIND = { crime: ["fa-handcuffs", t("kindCrime")], road: ["fa-car-burst", t("kindRoad")], corruption: ["fa-sack-dollar", t("kindCorruption")] };
-  const perSection = {};
   const candidates = [
     ...(crime.recent || []).map((a) => ({ a, cat: "crime" })),
     ...(road.recent || []).map((a) => ({ a, cat: "road" })),
@@ -466,21 +478,77 @@
   ];
   // the last two days; the last week if the feeds were quiet
   const recentTop = candidates.filter(({ a }) => a.date >= daysBack(1));
-  const top = (recentTop.length >= 3 ? recentTop : candidates.filter(({ a }) => a.date >= daysBack(6)))
-    .map((x) => ({ ...x, score: importance(x.a, x.cat) }))
-    .sort((x, y) => y.score - x.score || y.a.date.localeCompare(x.a.date))
-    .filter(({ cat }) => (perSection[cat] = (perSection[cat] || 0) + 1) <= 3)
-    .slice(0, 6);
-  $("#topList").innerHTML = top.map(({ a, cat }) => {
-    const [icon, kind] = KIND[cat];
-    const types = (a.types || []).filter((ty) => ty !== "Other" && ty !== "Other Corruption News").map(term).join(", ");
-    return `<li class="top-item ${cat}">
-      <span class="top-kind"><i class="fa-solid ${icon}"></i> ${esc(kind)}${types ? ` · ${esc(types)}` : ""}</span>
-      <a href="${safeUrl(a.url)}" target="_blank" rel="noopener">${esc(a.title)}</a>${cat === "road" ? casualtyBadge(a) : ""}
-      <span class="meta">${a.district ? `<b>${esc(term(a.district))}</b> · ` : ""}${esc(a.source)}${a.outlets > 1
-        ? ` ${t("moreOutlets", { n: a.outlets - 1 })}` : ""} · ${fmtDate(a.date)}${langBadge(a)}${reportLink(a, cat)}</span>
-    </li>`;
-  }).join("") || `<li class="empty">${t("noStories")}</li>`;
+  const topPool = recentTop.length >= 3 ? recentTop : candidates.filter(({ a }) => a.date >= daysBack(6));
+  function renderTop() {
+    const perSection = {};
+    const top = topPool.map((x) => ({ ...x, score: importance(x.a, x.cat) }))
+      .sort((x, y) => y.score - x.score || y.a.date.localeCompare(x.a.date))
+      .filter(({ cat }) => (perSection[cat] = (perSection[cat] || 0) + 1) <= 3)
+      .slice(0, 6);
+    $("#topList").innerHTML = top.map(({ a, cat }) => {
+      const [icon, kind] = KIND[cat];
+      const types = (a.types || []).filter((ty) => ty !== "Other" && ty !== "Other Corruption News").map(term).join(", ");
+      return `<li class="top-item ${cat}">
+        <span class="top-kind"><i class="fa-solid ${icon}"></i> ${esc(kind)}${types ? ` · ${esc(types)}` : ""}</span>
+        <a href="${safeUrl(a.url)}" target="_blank" rel="noopener">${esc(a.title)}</a>${cat === "road" ? casualtyBadge(a) : ""}
+        <span class="meta">${placeTag(a.district)}${esc(a.source)}${a.outlets > 1
+          ? ` ${t("moreOutlets", { n: a.outlets - 1 })}` : ""} · ${fmtDate(a.date)}${langBadge(a)}${reportLink(a, cat)}</span>
+      </li>`;
+    }).join("") || `<li class="empty">${t("noStories")}</li>`;
+  }
+  renderTop();
+
+  /* ---------- Your district: its numbers and latest stories first ---------- */
+  const mineSelect = $("#mineSelect");
+  Object.keys(districts).sort((a, b) => term(a).localeCompare(term(b), lang)).forEach((d) =>
+    mineSelect.insertAdjacentHTML("beforeend", `<option value="${esc(d)}">${esc(term(d))}</option>`));
+  mineSelect.value = mine;
+  const byReports = Object.keys(districts).sort((a, b) => districts[b] - districts[a]);
+  function renderMine() {
+    $("#mine").classList.toggle("chosen", !!mine);
+    $("#mineBody").hidden = !mine;
+    $("#mineTitle").textContent = mine ? t("mineTitleD", { d: term(mine) }) : t("mineTitle");
+    $("#mineSub").textContent = mine ? t("mineSubD") : t("mineSub");
+    // mark it on both maps and in the district lists
+    document.querySelectorAll(".tile").forEach((el) => el.classList.toggle("mine", el.dataset.name === mine));
+    document.querySelectorAll("#crimeDistricts [data-d], #roadDistricts [data-d]").forEach((el) => el.classList.toggle("me", el.dataset.d === mine));
+    if (!mine) return;
+    const local = stories.filter((a) => a.district === mine);
+    const reports = districts[mine] || 0;
+    const roadHere = roadDistricts[mine] || { deaths: 0, reports: 0 };
+    const kpi = (cls, value, label, note) => `<div class="kpi ${cls}"><b>${fmt(value)}</b><span>${esc(label)}</span>${note ? `<small>${esc(note)}</small>` : ""}</div>`;
+    $("#mineKpis").innerHTML =
+      kpi("red", reports, t("mineCrime"), [reports ? t("mineRank", { p: byReports.indexOf(mine) + 1, n: byReports.length }) : "",
+        t("mineWeek", { n: fmt(local.filter((a) => a.date >= daysBack(6)).length) })].filter(Boolean).join(" · "))
+      + kpi("purple", local.filter((a) => (a.types || []).includes("Women Safety")).length, t("mineWomen"))
+      + kpi("amber", roadHere.deaths, t("mineRoad"), t("mineRoadReports", { n: fmt(roadHere.reports) }));
+    const latest = [
+      ...local.map((a) => ({ a, cat: "crime" })),
+      ...(road.recent || []).filter((a) => a.district === mine).map((a) => ({ a, cat: "road" })),
+      ...(corruption.latest || []).filter((a) => a.district === mine).map((a) => ({ a, cat: "corruption" }))
+    ].sort((x, y) => y.a.date.localeCompare(x.a.date)).slice(0, 5);
+    $("#mineStories").innerHTML = latest.map(({ a, cat }) => `<li><span class="kind-tag ${cat}">${esc(KIND[cat][1])}</span>
+      <a href="${safeUrl(a.url)}" target="_blank" rel="noopener">${esc(a.title)}</a>${cat === "road" ? casualtyBadge(a) : ""}${storyMeta(a, cat)}</li>`).join("")
+      || `<li class="empty">${t("mineNone", { d: term(mine) })}</li>`;
+    $("#mineAll").textContent = t("mineAll", { d: term(mine) });
+    $("#mineAll").hidden = !reports;
+  }
+  renderMine();
+  mineSelect.addEventListener("change", () => {
+    mine = mineSelect.value;
+    try { mine ? localStorage.setItem(MINE_KEY, mine) : localStorage.removeItem(MINE_KEY); } catch (e) { /* private mode */ }
+    renderMine();
+    renderTop();
+    renderCrimeStories(false);
+    renderRoadNews();
+    renderCorruptionNews();
+  });
+  $("#mineAll").addEventListener("click", () => {
+    districtFilter.value = mine;
+    typeFilter.value = "";
+    renderCrimeStories(true);
+    $("#crimeNews").scrollIntoView({ behavior: "smooth", block: "start" });
+  });
 
   /* ---------- Prices (MoSPI consumer price inflation) ---------- */
   // MoSPI's division names are long; these fit a chart axis (Tamil versions live in i18n.js)
