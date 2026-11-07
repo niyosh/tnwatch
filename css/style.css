@@ -34,7 +34,7 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 a { color: inherit; text-decoration: none; }
-h1, h2 { font-family: Poppins, Inter, sans-serif; margin: 0; }
+h1, h2, h3, h4 { font-family: Poppins, Inter, sans-serif; margin: 0; }
 section { scroll-margin-top: 80px; }
 
 /* ================= HEADER ================= */
@@ -198,7 +198,7 @@ mark { background: #fff1a8; border-radius: 2px; }
 .card-head { display: flex; flex-wrap: wrap; gap: 10px 14px; align-items: flex-start; margin-bottom: 14px; }
 .card-head > .tabs { flex: 0 0 auto; margin-left: auto; }
 .card-head > div { flex: 1 1 180px; min-width: 0; }
-.card-head h2 { font-size: 16.5px; font-weight: 600; color: var(--ink); }
+.card-head h2, .card-head h3 { font-size: 16.5px; font-weight: 600; color: var(--ink); }
 .card-head p { margin: 2px 0 0; font-size: 12.5px; color: var(--muted); }
 .card-icon {
   flex-shrink: 0; width: 38px; height: 38px; border-radius: 9px;
@@ -416,17 +416,16 @@ a.news-title:hover { color: var(--brand); }
 
 /* Tamil script: matching font and room for longer words */
 html[lang="ta"] body { font-family: "Noto Sans Tamil", Inter, system-ui, sans-serif; }
-html[lang="ta"] h1, html[lang="ta"] h2, html[lang="ta"] h3,
+html[lang="ta"] h1, html[lang="ta"] h2, html[lang="ta"] h3, html[lang="ta"] h4,
 html[lang="ta"] .stat .val, html[lang="ta"] .hl b { font-family: "Noto Sans Tamil", Poppins, sans-serif; }
 html[lang="ta"] .hero h1 { font-size: clamp(32px, 4.4vw, 58px); line-height: 1.2; }
 html[lang="ta"] .hero .lead { font-size: clamp(15px, 1.5vw, 20px); }
-html[lang="ta"] .card-head h2 { font-size: 15.5px; line-height: 1.4; }
+html[lang="ta"] .card-head h2, html[lang="ta"] .card-head h3 { font-size: 15.5px; line-height: 1.4; }
 html[lang="ta"] .mainnav a { font-size: 12.5px; padding: 10px 10px; }
 html[lang="ta"] .tabs button { font-size: 11.5px; padding: 6px 8px; }
 html[lang="ta"] .stat .lbl { font-size: 12px; }
-@media (max-width: 1500px) {
-  html[lang="ta"] .mainnav a i { display: none; }
-}
+/* Tamil menu labels are long: no icons in the wide menu (the compact menu below shows them) */
+html[lang="ta"] .mainnav a i { display: none; }
 .brand, .brand > span { min-width: 0; }
 .brand small { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 @media (max-width: 760px) {
@@ -550,3 +549,67 @@ html[lang="ta"] .stat .lbl { font-size: 12px; }
 .mainnav a[hidden] { display: none; }
 #roadTable .chg { width: auto; }
 .stat-table thead th { line-height: 1.25; }
+
+/* ================= PRIORITY LAYOUT: TOP STORIES, SECTION BANDS ================= */
+/* headline numbers open their section */
+a.stat { transition: background .15s, border-color .15s; }
+a.stat:hover { background: rgba(13, 22, 42, .92); border-color: rgba(255,255,255,.28); }
+a.stat:focus-visible { outline: 2px solid var(--brand-2); outline-offset: 2px; }
+
+.band {
+  grid-column: 1 / -1; display: flex; align-items: center; gap: 12px;
+  margin-top: 12px; padding-bottom: 10px; border-bottom: 2px solid #dbe1ec; scroll-margin-top: 80px;
+}
+.band > i {
+  flex-shrink: 0; width: 36px; height: 36px; border-radius: 50%;
+  display: grid; place-items: center; background: var(--navy); color: #fff; font-size: 15px;
+}
+.band h2 { font-size: 19px; font-weight: 700; color: var(--ink); line-height: 1.25; }
+.band p { margin: 1px 0 0; font-size: 12.5px; color: var(--muted); }
+html[lang="ta"] .band h2 { font-size: 17.5px; }
+
+.top-list {
+  list-style: none; margin: 0; padding: 0; counter-reset: top;
+  display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px 16px;
+}
+.top-item {
+  position: relative; min-width: 0; padding: 10px 12px 10px 46px;
+  background: #f7f8fb; border-radius: 10px; border-left: 3px solid var(--muted);
+}
+.top-item::before {
+  counter-increment: top; content: counter(top);
+  position: absolute; left: 12px; top: 10px; width: 24px; height: 24px; border-radius: 50%;
+  display: grid; place-items: center; font: 700 12px Poppins, sans-serif; color: #fff; background: var(--muted);
+}
+.top-item.crime { border-left-color: var(--red); } .top-item.crime::before { background: var(--red); }
+.top-item.road { border-left-color: #f2753a; } .top-item.road::before { background: #f2753a; }
+.top-item.corruption { border-left-color: #d99a00; } .top-item.corruption::before { background: #d99a00; }
+.top-kind { display: block; font-size: 11px; font-weight: 600; letter-spacing: .3px; text-transform: uppercase; color: var(--muted); margin-bottom: 3px; }
+.top-item > a { display: block; font-size: 13.5px; font-weight: 600; line-height: 1.4; }
+.top-item > a:hover { color: var(--brand); }
+.top-item .meta { display: block; font-size: 11.5px; color: var(--muted); margin-top: 4px; }
+.top-item .meta b { color: var(--ink); font-weight: 600; }
+.top-item .casualty { margin-top: 3px; }
+
+/* districts with most crime reports: click to see their stories */
+.rank-list li.pick { cursor: pointer; border-radius: 6px; padding-left: 4px; padding-right: 4px; }
+.rank-list li.pick:hover, .rank-list li.pick:focus-visible { background: #f2f5fb; outline: 0; }
+#crimeDistricts { margin-top: 16px; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: 18px; }
+#crimeDistricts .list-title { grid-column: 1 / -1; }
+/* charts that share a row with taller cards use the spare height */
+.card > .chart-box.fill { flex: 1 1 auto; height: auto; min-height: 260px; }
+@media (max-width: 760px) {
+  .card > .chart-box.fill { flex: none; min-height: 0; height: 220px; }
+}
+
+@media (max-width: 1180px) {
+  .top-list { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  #corruptionNews.span2 { grid-column: auto; }
+}
+@media (max-width: 760px) {
+  .top-list { grid-template-columns: 1fr; }
+  .band { margin-top: 8px; }
+  .band h2 { font-size: 17px; }
+  /* on phones the numbers and top stories come before the decorative quote */
+  .hero-quote { display: none; }
+}

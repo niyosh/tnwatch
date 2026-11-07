@@ -31,14 +31,35 @@ language that share their key words, or English and Tamil stories with the same 
 Changes (↑ / ↓ %) appear once the script has collected two full periods (2 days for "Today", 2 weeks for "This Week",
 2 months for "This Month").
 
+Court verdicts and sentences (they come years after the crime), appeals, prosecutor appointments, relief payments,
+politicians' statements and crimes in other states are not counted as new incidents. Crime-search stories about bribes
+or corruption are counted under corruption.
+
+## How the page is organized
+Most important first, so phones show what matters before the reader has to scroll far:
+
+1. **Headline numbers**: latest crime reports (24 h), road deaths, women's safety, inflation, then the 30-day crime and
+   corruption counts, debt and borrowing. Each opens its section.
+2. **Top Stories**: the six most important reports of the last two days, ranked by how many outlets covered the incident,
+   how serious it is (murder and crimes against women and children above theft; deaths in a crash) and how recent it is,
+   with at most three per section.
+3. **Safety**: crime (types, district map, districts with most reports, latest stories, trend), then road accidents.
+4. **Cost of living**: inflation in Tamil Nadu vs India and what is getting costlier.
+5. **Corruption**: counts by type and the latest cases.
+6. **Government money**: debt and this year's borrowing.
+7. **More news & sources**: other news, where every number comes from, downloads.
+
+The order lives in `index.html`; the ranking rules for Top Stories are in `js/app.js` (search "Top stories").
+
 ## How the hourly update works
 `.github/workflows/update.yml` runs on GitHub Actions (free for public repositories):
 
 - **Every hour** the update starts itself: each run ends by starting `.github/workflows/timer.yml`, which waits
   55 minutes on the `hourly` environment's wait timer (Settings → Environments; waiting uses no runner and isn't billed)
   and then starts the next update. GitHub's own schedule started only 4–5 of 24 hourly runs a day here, so it is now
-  just a backup that restarts the chain if it ever stops. Runs started by the timer or the schedule update only when
-  the published data is over 50 minutes old.
+  just a backup that restarts the chain if it ever stops. Starting the timer is retried, since one failed request to
+  GitHub once stopped the chain for 9 hours. Runs started by the timer or the schedule update only when the published
+  data is over 50 minutes old.
 - **Each update** searches the last 24 hours, rebuilds the numbers, draws the share image and publishes the site.
   When the last **full sweep** is over 20 hours old it also runs the 7- and 30-day searches and refreshes the official data.
 - **On every push to `main`** — publishes the new code with the latest data, without fetching.

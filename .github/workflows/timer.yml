@@ -5,6 +5,11 @@ name: Hourly timer
 # then starts the next update. To pause the hourly updates, disable this workflow in the Actions tab.
 on:
   workflow_dispatch:
+    inputs:
+      started:
+        description: "When the timer was started (seconds since 1970, filled in by the update workflow)"
+        required: false
+        default: "0"
 
 permissions:
   actions: write   # start the update workflow
@@ -20,17 +25,18 @@ jobs:
       - name: Start the update
         env:
           GH_TOKEN: ${{ github.token }}
+          STARTED: ${{ inputs.started }}
         run: |
-          # Without the wait timer this would start an update every minute, so refuse if the job didn't wait.
-          created=$(gh run view "$GITHUB_RUN_ID" -R "$GITHUB_REPOSITORY" --json createdAt --jq .createdAt)
-          waited=$(( ($(date +%s) - $(date -d "$created" +%s)) / 60 ))
+          # Without the wait timer this would start an update every minute, so refuse if the job didn't wait
+          case "$STARTED" in ''|*[!0-9]*) STARTED=0 ;; esac
+          waited=$(( ($(date +%s) - STARTED) / 60 ))
           echo "Waited $waited minutes"
           if [ "$waited" -lt 30 ]; then
             echo "::error::The hourly environment has no wait timer, so the next update was not started (the backup schedule still runs)."
             exit 1
           fi
-          for try in 1 2 3; do
+          for try in 1 2 3 4; do
             if gh workflow run update.yml -R "$GITHUB_REPOSITORY" -f mode=auto; then exit 0; fi
-            sleep 20
+            sleep 30
           done
           exit 1

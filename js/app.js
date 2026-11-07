@@ -93,39 +93,44 @@
   document.addEventListener("visibilitychange", () => { if (!document.hidden) checkForUpdate(); });
   $("#updateToast button").addEventListener("click", () => window.I18N.reload());
 
-  /* ---------- Stat cards (only what the sources provide) ---------- */
+  /* ---------- Stat cards (only what the sources provide), most important first; each opens its section ---------- */
   const stats = [];
-  stats.push({ icon: "fa-user-ninja", color: "red", value: fmt(sumCounts(month)), label: t("statCrime"), period: t("last30") });
+  stats.push({ icon: "fa-bolt", color: "teal", value: fmt(hourly.reduce((a, h) => a + h.crime, 0)), label: t("statRecent"), period: t("last24"),
+    href: "#crimeNews" });
+  if (road.totals) stats.push({ icon: "fa-car-burst", color: "red", value: fmt(road.totals.month.deaths), label: t("statRoad"), period: t("last30"),
+    href: "#road" });
   const women = month.find((r) => r.type === "Women Safety");
-  if (women) stats.push({ icon: "fa-person-dress", color: "purple", value: fmt(women.count), label: t("statWomen"), period: t("last30"), change: women.change });
-  stats.push({ icon: "fa-people-group", color: "amber", value: fmt(sumCounts(corruption.periods?.month)), label: t("statCorruption"), period: t("last30") });
-  stats.push({ icon: "fa-bolt", color: "teal", value: fmt(hourly.reduce((a, h) => a + h.crime, 0)), label: t("statRecent"), period: t("last24") });
-  if (road.totals) stats.push({ icon: "fa-car-burst", color: "red", value: fmt(road.totals.month.deaths), label: t("statRoad"), period: t("last30") });
+  if (women) stats.push({ icon: "fa-person-dress", color: "purple", value: fmt(women.count), label: t("statWomen"), period: t("last30"), change: women.change,
+    href: "#crimeNews", type: "Women Safety" });
   if (inflation) stats.push({ icon: "fa-tags", color: "purple", value: `${inflation.tn.combined}%`, label: t("statInflation"),
-    period: `${monthLabel(inflation.latest.month)} · ${t("india")} ${inflation.india.combined}%` });
+    period: `${monthLabel(inflation.latest.month)} · ${t("india")} ${inflation.india.combined}%`, href: "#prices" });
+  stats.push({ icon: "fa-user-ninja", color: "red", value: fmt(sumCounts(month)), label: t("statCrime"), period: t("last30"), href: "#crime" });
+  stats.push({ icon: "fa-people-group", color: "amber", value: fmt(sumCounts(corruption.periods?.month)), label: t("statCorruption"), period: t("last30"),
+    href: "#corruption" });
   if (debt) stats.push({ icon: "fa-landmark", color: "blue", value: fmtCr(debt.latest.total), label: t("statDebt"),
-    period: t("endMarch", { y: debt.latest.year }), wide: true });
+    period: t("endMarch", { y: debt.latest.year }), wide: true, href: "#debt" });
   if (borrowing) stats.push({ icon: "fa-money-bill-transfer", color: "green", value: fmtCr(borrowing.raised), label: t("statBorrowed"),
-    period: t("sinceApril", { y: borrowing.fyStart.slice(0, 4) }), wide: true });
+    period: t("sinceApril", { y: borrowing.fyStart.slice(0, 4) }), wide: true, href: "#borrowing" });
   if (official?.series?.length) {
     const s = official.series, last = s[s.length - 1], prev = s[s.length - 2];
     stats.push({ icon: "fa-scale-balanced", color: "blue", value: fmt(last.value), label: t("statOfficial"), period: `NCRB ${last.year}`,
-      change: prev ? pctChange(last.value, prev.value) : null });
+      change: prev ? pctChange(last.value, prev.value) : null, href: "#crime" });
   }
   if (economy?.series?.length) {
     const s = economy.series, last = s[s.length - 1], prev = s[s.length - 2];
     stats.push({ icon: "fa-indian-rupee-sign", color: "green", value: `₹${last.value}`, label: `GSDP (${economy.unit})`, period: last.year,
-      change: prev ? pctChange(last.value, prev.value) : null, upIsGood: true });
+      change: prev ? pctChange(last.value, prev.value) : null, upIsGood: true, href: "#economy" });
   }
-  $("#stats").innerHTML = stats.map((s) => `
-    <div class="stat${s.wide ? " long" : ""}">
+  // two rows of four; older yearly figures (NCRB) stay in their cards
+  $("#stats").innerHTML = stats.slice(0, 8).map((s) => `
+    <a class="stat${s.wide ? " long" : ""}" href="${s.href}"${s.type ? ` data-type="${esc(s.type)}"` : ""}>
       <span class="ico ${s.color}"><i class="fa-solid ${s.icon}"></i></span>
       <div>
         <div class="val">${esc(s.value)}</div>
         <div class="lbl">${esc(s.label)}</div>
         <div class="per">${esc(s.period)}${s.change == null ? "" : `<b>${change(s.change, s.upIsGood)}</b>`}</div>
       </div>
-    </div>`).join("");
+    </a>`).join("");
 
   /* ---------- Crime / corruption tables ---------- */
   function renderTable(el, rows, withTotal) {
@@ -340,7 +345,7 @@
     </li>`;
   }).join("") || `<li class="empty">${t("noStories")}</li>`;
 
-  $("#corruptionHeadlines").innerHTML = preferLang(corruption.latest || [], 3).slice(0, 6).map((a) => `
+  $("#corruptionHeadlines").innerHTML = preferLang(corruption.latest || [], 3).slice(0, 8).map((a) => `
     <li><a href="${safeUrl(a.url)}" target="_blank" rel="noopener">${esc(a.title)}</a>${storyMeta(a, "corruption")}</li>`).join("")
     || `<li class="empty">${t("noStories")}</li>`;
 
@@ -349,7 +354,7 @@
   const districtFilter = $("#districtFilter");
   const typeFilter = $("#typeFilter");
   const langFilter = $("#langFilter");
-  const PAGE = 8;
+  const PAGE = 6;
   let shown = PAGE;
   let autoLang = true; // until the reader picks a language themselves
   Object.keys(districts).sort((a, b) => term(a).localeCompare(term(b), lang)).forEach((d) => {
@@ -387,6 +392,30 @@
   langFilter.addEventListener("change", () => { autoLang = false; renderCrimeStories(true); });
   $("#crimeMore").addEventListener("click", () => { shown += PAGE; renderCrimeStories(false); });
   renderCrimeStories(true);
+  // the women-safety headline number opens the stories of that type
+  $("#stats").addEventListener("click", (e) => {
+    const card = e.target.closest("[data-type]");
+    if (!card) return;
+    districtFilter.value = "";
+    typeFilter.value = card.dataset.type;
+    renderCrimeStories(true);
+  });
+
+  /* ---------- Districts with most crime reports (click: their stories) ---------- */
+  const busiest = Object.entries(districts).filter(([, n]) => n).sort((a, b) => b[1] - a[1]).slice(0, 6);
+  $("#crimeDistricts").innerHTML = `<li class="list-title">${t("busiestDistricts")}</li>` + busiest.map(([d, n]) =>
+    `<li class="pick" data-d="${esc(d)}" role="button" tabindex="0" aria-label="${esc(`${term(d)}: ${t("tileTip", { n: fmt(n) })}. ${t("showStories")}`)}">
+      <span>${esc(term(d))}</span><b>${fmt(n)}</b></li>`).join("");
+  const pickDistrict = (e) => {
+    const li = e.target.closest("[data-d]");
+    if (!li || (e.type === "keydown" && e.key !== "Enter" && e.key !== " ")) return;
+    e.preventDefault();
+    districtFilter.value = li.dataset.d;
+    renderCrimeStories(true);
+    $("#crimeNews").scrollIntoView({ behavior: "smooth", block: "start" });
+  };
+  $("#crimeDistricts").addEventListener("click", pickDistrict);
+  $("#crimeDistricts").addEventListener("keydown", pickDistrict);
 
   /* ---------- Road safety: district map, daily chart, latest stories ---------- */
   const roadDistricts = road.districts || {};
@@ -397,7 +426,7 @@
       ? ` <i class="fa-solid fa-user-injured"></i> ${a.injured}` : ""}</span>` : "");
   function renderRoadNews() {
     const all = (road.recent || []).filter((a) => !roadDistrict || a.district === roadDistrict);
-    const items = (roadDistrict ? all : preferLang(all, 3)).slice(0, 8);
+    const items = (roadDistrict ? all : preferLang(all, 3)).slice(0, 7);
     $("#roadHeadlines").innerHTML = (roadDistrict
       ? `<li class="filter-chip">${esc(term(roadDistrict))} <button type="button" data-clear aria-label="${esc(t("clearFilter"))}">✕</button></li>` : "")
       + (items.map((a) => `<li><a href="${safeUrl(a.url)}" target="_blank" rel="noopener">${esc(a.title)}</a>${casualtyBadge(a)}${storyMeta(a, "road")}</li>`).join("")
@@ -411,10 +440,47 @@
     (name) => { roadDistrict = name; renderRoadNews(); $("#roadNews").scrollIntoView({ behavior: "smooth", block: "start" }); });
   $("#roadDistricts").innerHTML = Object.entries(roadDistricts)
     .filter(([, v]) => v.reports)
-    .sort((a, b) => b[1].deaths - a[1].deaths || b[1].reports - a[1].reports).slice(0, 8)
+    .sort((a, b) => b[1].deaths - a[1].deaths || b[1].reports - a[1].reports).slice(0, 10)
     .map(([d, v]) => `<li><span>${esc(term(d))}</span><b>${fmt(v.deaths)}</b><small>${t("reportsCount", { n: fmt(v.reports) })}</small></li>`).join("")
     || `<li class="empty">${t("noStories")}</li>`;
   renderRoadNews();
+
+  /* ---------- Top stories: the most important reports of the last two days ---------- */
+  // Importance: how many outlets covered it, how serious it is (violent crime, deaths) and how recent it is.
+  // At most three per section, so a busy crime day doesn't push out a deadly crash or a corruption arrest.
+  const SEVERITY = { Murder: 3, "Women Safety": 3, Robbery: 2, Assault: 2, Narcotics: 1, "Cyber Crime": 1, Theft: 1 };
+  const today = String(D.generatedAt).slice(0, 10);
+  const daysBack = (n) => new Date(Date.parse(today) - n * 864e5).toISOString().slice(0, 10);
+  const importance = (a, cat) => 2 * (a.outlets || 1)
+    + (cat === "crime" ? Math.max(1, ...(a.types || []).map((ty) => SEVERITY[ty] || 1)) : 0)
+    + (cat === "road" ? Math.min(a.deaths || 0, 5) + (a.injured >= 5 ? 1 : 0) : 0)
+    + (cat === "corruption" ? 2 : 0)
+    + (a.date === today ? 1 : 0)
+    + (storyLang(a) === lang ? 0.5 : 0);
+  const KIND = { crime: ["fa-handcuffs", t("kindCrime")], road: ["fa-car-burst", t("kindRoad")], corruption: ["fa-sack-dollar", t("kindCorruption")] };
+  const perSection = {};
+  const candidates = [
+    ...(crime.recent || []).map((a) => ({ a, cat: "crime" })),
+    ...(road.recent || []).map((a) => ({ a, cat: "road" })),
+    ...(corruption.latest || []).map((a) => ({ a, cat: "corruption" }))
+  ];
+  // the last two days; the last week if the feeds were quiet
+  const recentTop = candidates.filter(({ a }) => a.date >= daysBack(1));
+  const top = (recentTop.length >= 3 ? recentTop : candidates.filter(({ a }) => a.date >= daysBack(6)))
+    .map((x) => ({ ...x, score: importance(x.a, x.cat) }))
+    .sort((x, y) => y.score - x.score || y.a.date.localeCompare(x.a.date))
+    .filter(({ cat }) => (perSection[cat] = (perSection[cat] || 0) + 1) <= 3)
+    .slice(0, 6);
+  $("#topList").innerHTML = top.map(({ a, cat }) => {
+    const [icon, kind] = KIND[cat];
+    const types = (a.types || []).filter((ty) => ty !== "Other" && ty !== "Other Corruption News").map(term).join(", ");
+    return `<li class="top-item ${cat}">
+      <span class="top-kind"><i class="fa-solid ${icon}"></i> ${esc(kind)}${types ? ` · ${esc(types)}` : ""}</span>
+      <a href="${safeUrl(a.url)}" target="_blank" rel="noopener">${esc(a.title)}</a>${cat === "road" ? casualtyBadge(a) : ""}
+      <span class="meta">${a.district ? `<b>${esc(term(a.district))}</b> · ` : ""}${esc(a.source)}${a.outlets > 1
+        ? ` ${t("moreOutlets", { n: a.outlets - 1 })}` : ""} · ${fmtDate(a.date)}${langBadge(a)}${reportLink(a, cat)}</span>
+    </li>`;
+  }).join("") || `<li class="empty">${t("noStories")}</li>`;
 
   /* ---------- Prices (MoSPI consumer price inflation) ---------- */
   // MoSPI's division names are long; these fit a chart axis (Tamil versions live in i18n.js)

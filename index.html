@@ -16,7 +16,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@500;600;700;800&family=Inter:wght@400;500;600;700&family=Noto+Sans+Tamil:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-  <link rel="stylesheet" href="css/style.css?v=6">
+  <link rel="stylesheet" href="css/style.css?v=7">
 </head>
 <body>
 
@@ -38,12 +38,12 @@
 
       <nav class="mainnav" id="mainnav">
         <a class="active" href="#"><i class="fa-solid fa-house"></i><span data-i18n="navHome">Home</span></a>
+        <a href="#top"><i class="fa-solid fa-fire-flame-curved"></i><span data-i18n="navTop">Top Stories</span></a>
         <a href="#crime"><i class="fa-solid fa-shield-halved"></i><span data-i18n="navCrime">Crime</span></a>
-        <a href="#corruption"><i class="fa-solid fa-handshake-slash"></i><span data-i18n="navCorruption">Corruption</span></a>
         <a href="#road"><i class="fa-solid fa-car-burst"></i><span data-i18n="navRoad">Road Safety</span></a>
         <a href="#prices"><i class="fa-solid fa-tags"></i><span data-i18n="navPrices">Prices</span></a>
+        <a href="#corruption"><i class="fa-solid fa-handshake-slash"></i><span data-i18n="navCorruption">Corruption</span></a>
         <a href="#debt"><i class="fa-solid fa-landmark"></i><span data-i18n="navDebt">Debt</span></a>
-        <a href="#news"><i class="fa-solid fa-newspaper"></i><span data-i18n="navNews">News</span></a>
         <a href="#economy" id="navEconomy" hidden><i class="fa-solid fa-chart-column"></i><span data-i18n="navEconomy">Economy</span></a>
         <a href="#sources"><i class="fa-solid fa-database"></i><span data-i18n="navSources">Sources</span></a>
       </nav>
@@ -74,7 +74,7 @@
         <h1 data-i18n="heroTitle">A Transparent<br><span>Tamil Nadu</span></h1>
         <p class="lead" data-i18n="heroLead">Real Data. Real Facts. Informed Citizens.</p>
         <p class="topics">
-          <a href="#crime" data-i18n="topicCrime">Crime</a><a href="#corruption" data-i18n="topicCorruption">Corruption</a><a href="#road" data-i18n="topicRoad">Road Safety</a><a href="#prices" data-i18n="topicPrices">Prices</a><a href="#debt" data-i18n="topicDebt">Government Debt</a><a href="#news" data-i18n="topicNews">News</a>
+          <a href="#crime" data-i18n="topicCrime">Crime</a><a href="#road" data-i18n="topicRoad">Road Safety</a><a href="#prices" data-i18n="topicPrices">Prices</a><a href="#corruption" data-i18n="topicCorruption">Corruption</a><a href="#debt" data-i18n="topicDebt">Government Debt</a><a href="#news" data-i18n="topicNews">News</a>
         </p>
       </div>
       <blockquote class="hero-quote">
@@ -105,15 +105,39 @@
     <span class="stale-msg" id="staleMsg" role="status" hidden></span>
   </div>
 
-  <!-- ================= DASHBOARD GRID ================= -->
+  <!-- ================= DASHBOARD GRID =================
+       Ordered by what matters most in daily life: the day's top stories, then safety (crime, roads),
+       the cost of living, corruption, the government's money, and finally other news and sources. -->
   <main class="grid">
+
+    <!-- Top stories: the most important reports of the last two days -->
+    <section class="card wide" id="top">
+      <div class="card-head">
+        <span class="card-icon red"><i class="fa-solid fa-fire-flame-curved"></i></span>
+        <div>
+          <h2 data-i18n="topTitle">Top Stories</h2>
+          <p data-i18n="topSub">The most important reports of the last two days</p>
+        </div>
+      </div>
+      <ol class="top-list" id="topList"></ol>
+      <p class="fine" data-i18n="topNote">Ranked by how many outlets reported each incident, how serious it is (deaths, violent crime) and how recent it is.</p>
+    </section>
+
+    <!-- ================= 1. SAFETY ================= -->
+    <div class="band" id="safety">
+      <i class="fa-solid fa-shield-halved" aria-hidden="true"></i>
+      <div>
+        <h2 data-i18n="bandSafety">Safety</h2>
+        <p data-i18n="bandSafetySub">Crime and road accidents reported in the news, by district</p>
+      </div>
+    </div>
 
     <!-- Crime -->
     <section class="card" id="crime">
       <div class="card-head">
         <span class="card-icon red"><i class="fa-solid fa-user-ninja"></i></span>
         <div>
-          <h2 data-i18n="crimeTitle">Crime in Tamil Nadu</h2>
+          <h3 data-i18n="crimeTitle">Crime in Tamil Nadu</h3>
           <p id="crimeSub">News reports by type and district</p>
         </div>
         <div class="tabs" data-target="crime" role="tablist" aria-label="Crime period">
@@ -134,53 +158,7 @@
         </div>
         <div id="crimeTableWrap"><table class="stat-table" id="crimeTable"></table></div>
       </div>
-    </section>
-
-    <!-- Corruption -->
-    <section class="card" id="corruption">
-      <div class="card-head">
-        <span class="card-icon amber"><i class="fa-solid fa-user-secret"></i></span>
-        <div>
-          <h2 data-i18n="corrTitle">Corruption &amp; Misconduct</h2>
-          <p data-i18n="corrSub">News reports of bribery, raids and action against officials</p>
-        </div>
-      </div>
-      <div class="tabs tabs-center" data-target="corruption" role="tablist" aria-label="Corruption period">
-        <button data-period="today" data-i18n="tabToday">Today</button>
-        <button data-period="week" data-i18n="tabWeek">This Week</button>
-        <button data-period="month" class="on" data-i18n="tabMonth">This Month</button>
-      </div>
-      <table class="stat-table roomy" id="corruptionTable"></table>
-      <p class="disclaimer" data-i18n="corrDisclaimer">These are reports of allegations and official action. Anyone accused is innocent until proven guilty in court.</p>
-    </section>
-
-    <!-- News -->
-    <section class="card" id="news">
-      <div class="card-head">
-        <span class="card-icon blue"><i class="fa-solid fa-newspaper"></i></span>
-        <div>
-          <h2 data-i18n="newsTitle">Latest News &amp; Updates</h2>
-          <p data-i18n="newsSub">Crime, corruption and development</p>
-        </div>
-      </div>
-      <ul class="news-list" id="newsList"></ul>
-    </section>
-
-    <!-- 30-day trend -->
-    <section class="card span2" id="trend">
-      <div class="card-head">
-        <span class="card-icon purple"><i class="fa-solid fa-chart-line"></i></span>
-        <div>
-          <h2 data-i18n="trendTitle">Trend</h2>
-          <p id="trendSub">News reports per day</p>
-        </div>
-        <div class="tabs" data-target="trend" role="tablist" data-i18n-label="trendLabel" aria-label="Time range">
-          <button data-period="30d" class="on" data-i18n="trend30">30 days</button>
-          <button data-period="24h" data-i18n="trend24">24 hours</button>
-        </div>
-      </div>
-      <div class="chart-box tall"><canvas id="trendChart" aria-label="Crime and corruption news reports over time" role="img"></canvas></div>
-      <p class="fine" id="trendNote"></p>
+      <ol class="rank-list compact" id="crimeDistricts"></ol>
     </section>
 
     <!-- Latest crime headlines (filterable by district) -->
@@ -188,7 +166,7 @@
       <div class="card-head">
         <span class="card-icon red"><i class="fa-solid fa-handcuffs"></i></span>
         <div>
-          <h2 data-i18n="crimeNewsTitle">Latest Crime Reports</h2>
+          <h3 data-i18n="crimeNewsTitle">Latest Crime Reports</h3>
           <p id="crimeNewsSub">Most recent crime stories with district</p>
         </div>
         <button type="button" class="share-btn ghost" id="shareView"><i class="fa-solid fa-share-nodes"></i><span data-i18n="shareViewBtn">Share</span></button>
@@ -206,12 +184,29 @@
       <button class="more-btn" id="crimeMore" hidden data-i18n="showMore">Show more</button>
     </section>
 
-    <!-- ================= ROAD SAFETY ================= -->
+    <!-- Trend and the districts with most reports -->
+    <section class="card" id="trend">
+      <div class="card-head">
+        <span class="card-icon purple"><i class="fa-solid fa-chart-line"></i></span>
+        <div>
+          <h3 data-i18n="trendTitle">Trend</h3>
+          <p id="trendSub">News reports per day</p>
+        </div>
+        <div class="tabs" data-target="trend" role="tablist" data-i18n-label="trendLabel" aria-label="Time range">
+          <button data-period="30d" class="on" data-i18n="trend30">30 days</button>
+          <button data-period="24h" data-i18n="trend24">24 hours</button>
+        </div>
+      </div>
+      <div class="chart-box tall fill"><canvas id="trendChart" aria-label="Crime and corruption news reports over time" role="img"></canvas></div>
+      <p class="fine" id="trendNote"></p>
+    </section>
+
+    <!-- Road safety -->
     <section class="card" id="road">
       <div class="card-head">
         <span class="card-icon amber"><i class="fa-solid fa-car-burst"></i></span>
         <div>
-          <h2 data-i18n="roadTitle">Road Safety</h2>
+          <h3 data-i18n="roadTitle">Road Safety</h3>
           <p id="roadSub">Road accident news reports</p>
         </div>
         <div class="tabs" data-target="road" role="tablist" aria-label="Road accidents period">
@@ -230,7 +225,7 @@
       <div class="card-head">
         <span class="card-icon red"><i class="fa-solid fa-map-location-dot"></i></span>
         <div>
-          <h2 data-i18n="roadMapTitle">Road Deaths by District</h2>
+          <h3 data-i18n="roadMapTitle">Road Deaths by District</h3>
           <p data-i18n="roadMapSub">Deaths named in news reports, last 30 days</p>
         </div>
       </div>
@@ -244,30 +239,49 @@
       <div class="card-head">
         <span class="card-icon amber"><i class="fa-solid fa-road"></i></span>
         <div>
-          <h2 data-i18n="roadNewsTitle">Latest Road Accident Reports</h2>
+          <h3 data-i18n="roadNewsTitle">Latest Road Accident Reports</h3>
           <p data-i18n="roadNewsSub">Most recent accident stories with district</p>
         </div>
       </div>
       <ul class="headline-list" id="roadHeadlines"></ul>
     </section>
 
-    <!-- ================= PRICES (MoSPI CPI) ================= -->
+    <!-- ================= 2. COST OF LIVING (MoSPI CPI) ================= -->
+    <div class="band" id="living">
+      <i class="fa-solid fa-basket-shopping" aria-hidden="true"></i>
+      <div>
+        <h2 data-i18n="bandLiving">Cost of Living</h2>
+        <p data-i18n="bandLivingSub">How fast prices are rising in Tamil Nadu, from MoSPI</p>
+      </div>
+    </div>
+
     <section class="card" id="prices">
       <div class="card-head">
         <span class="card-icon purple"><i class="fa-solid fa-tags"></i></span>
         <div>
-          <h2 data-i18n="pricesTitle">Prices &amp; Inflation</h2>
+          <h3 data-i18n="pricesTitle">Prices &amp; Inflation</h3>
           <p id="pricesSub">Consumer Price Index</p>
         </div>
       </div>
       <div id="pricesBody" class="figure-body"></div>
     </section>
 
+    <section class="card" id="pricesWhy">
+      <div class="card-head">
+        <span class="card-icon purple"><i class="fa-solid fa-basket-shopping"></i></span>
+        <div>
+          <h3 data-i18n="pricesWhyTitle">What's Getting Costlier</h3>
+          <p data-i18n="pricesWhySub">Inflation by category, Tamil Nadu vs India (%)</p>
+        </div>
+      </div>
+      <div class="chart-box tall"><canvas id="divisionChart" aria-label="Inflation by category" role="img"></canvas></div>
+    </section>
+
     <section class="card" id="pricesTrend">
       <div class="card-head">
         <span class="card-icon purple"><i class="fa-solid fa-chart-line"></i></span>
         <div>
-          <h2 data-i18n="pricesTrendTitle">Inflation Trend</h2>
+          <h3 data-i18n="pricesTrendTitle">Inflation Trend</h3>
           <p data-i18n="pricesTrendSub">Tamil Nadu vs India, year-on-year (%)</p>
         </div>
       </div>
@@ -275,23 +289,57 @@
       <ol class="rank-list compact" id="inflationStates"></ol>
     </section>
 
-    <section class="card" id="pricesWhy">
+    <!-- ================= 3. CORRUPTION ================= -->
+    <div class="band" id="accountability">
+      <i class="fa-solid fa-scale-balanced" aria-hidden="true"></i>
+      <div>
+        <h2 data-i18n="bandAccount">Corruption</h2>
+        <p data-i18n="bandAccountSub">Bribery cases, vigilance raids and action against officials</p>
+      </div>
+    </div>
+
+    <section class="card" id="corruption">
       <div class="card-head">
-        <span class="card-icon purple"><i class="fa-solid fa-basket-shopping"></i></span>
+        <span class="card-icon amber"><i class="fa-solid fa-user-secret"></i></span>
         <div>
-          <h2 data-i18n="pricesWhyTitle">What's Getting Costlier</h2>
-          <p data-i18n="pricesWhySub">Inflation by category, Tamil Nadu vs India (%)</p>
+          <h3 data-i18n="corrTitle">Corruption &amp; Misconduct</h3>
+          <p data-i18n="corrSub">News reports of bribery, raids and action against officials</p>
         </div>
       </div>
-      <div class="chart-box tall"><canvas id="divisionChart" aria-label="Inflation by category" role="img"></canvas></div>
+      <div class="tabs tabs-center" data-target="corruption" role="tablist" aria-label="Corruption period">
+        <button data-period="today" data-i18n="tabToday">Today</button>
+        <button data-period="week" data-i18n="tabWeek">This Week</button>
+        <button data-period="month" class="on" data-i18n="tabMonth">This Month</button>
+      </div>
+      <table class="stat-table roomy" id="corruptionTable"></table>
+      <p class="disclaimer" data-i18n="corrDisclaimer">These are reports of allegations and official action. Anyone accused is innocent until proven guilty in court.</p>
     </section>
 
-    <!-- ================= DEBT (RBI) ================= -->
+    <section class="card span2" id="corruptionNews">
+      <div class="card-head">
+        <span class="card-icon amber"><i class="fa-solid fa-scale-unbalanced"></i></span>
+        <div>
+          <h3 data-i18n="corrNewsTitle">Latest Corruption Reports</h3>
+          <p data-i18n="corrNewsSub">Most recent vigilance and bribery stories</p>
+        </div>
+      </div>
+      <ul class="headline-list" id="corruptionHeadlines"></ul>
+    </section>
+
+    <!-- ================= 4. GOVERNMENT MONEY (RBI) ================= -->
+    <div class="band" id="money">
+      <i class="fa-solid fa-landmark" aria-hidden="true"></i>
+      <div>
+        <h2 data-i18n="bandMoney">Government Money</h2>
+        <p data-i18n="bandMoneySub">What the Tamil Nadu government owes and borrows, from RBI</p>
+      </div>
+    </div>
+
     <section class="card" id="debt">
       <div class="card-head">
         <span class="card-icon blue"><i class="fa-solid fa-landmark"></i></span>
         <div>
-          <h2 data-i18n="debtTitle">Tamil Nadu Government Debt</h2>
+          <h3 data-i18n="debtTitle">Tamil Nadu Government Debt</h3>
           <p id="debtSub">Outstanding liabilities</p>
         </div>
       </div>
@@ -302,11 +350,11 @@
       <div class="card-head">
         <span class="card-icon blue"><i class="fa-solid fa-chart-column"></i></span>
         <div>
-          <h2 data-i18n="debtTrendTitle">Debt Over the Years</h2>
+          <h3 data-i18n="debtTrendTitle">Debt Over the Years</h3>
           <p data-i18n="debtTrendSub">Outstanding liabilities at end-March (₹ lakh crore)</p>
         </div>
       </div>
-      <div class="chart-box tall"><canvas id="debtChart" aria-label="Tamil Nadu debt by year" role="img"></canvas></div>
+      <div class="chart-box tall fill"><canvas id="debtChart" aria-label="Tamil Nadu debt by year" role="img"></canvas></div>
       <p class="fine" id="debtGrowth"></p>
     </section>
 
@@ -314,31 +362,51 @@
       <div class="card-head">
         <span class="card-icon green"><i class="fa-solid fa-money-bill-transfer"></i></span>
         <div>
-          <h2 data-i18n="borrowTitle">Borrowing This Year</h2>
+          <h3 data-i18n="borrowTitle">Borrowing This Year</h3>
           <p data-i18n="borrowSub">Weekly RBI auctions of state government bonds</p>
         </div>
       </div>
       <div id="borrowBody" class="figure-body"></div>
     </section>
 
-    <!-- Latest corruption headlines -->
-    <section class="card" id="corruptionNews">
+    <!-- Economy (shown only when an official GSDP source is connected) -->
+    <section class="card wide" id="economy" hidden>
       <div class="card-head">
-        <span class="card-icon amber"><i class="fa-solid fa-scale-unbalanced"></i></span>
+        <span class="card-icon purple"><i class="fa-solid fa-chart-column"></i></span>
         <div>
-          <h2 data-i18n="corrNewsTitle">Latest Corruption Reports</h2>
-          <p data-i18n="corrNewsSub">Most recent vigilance and bribery stories</p>
+          <h3 data-i18n="econTitle">Tamil Nadu GDP &amp; Economy</h3>
+          <p id="economySub">Gross State Domestic Product</p>
         </div>
       </div>
-      <ul class="headline-list" id="corruptionHeadlines"></ul>
+      <div class="chart-box"><canvas id="gdpChart" aria-label="GSDP and growth rate by year" role="img"></canvas></div>
+      <div class="highlights" id="highlights"></div>
     </section>
 
-    <!-- Sources -->
+    <!-- ================= 5. MORE NEWS, SOURCES, OPEN DATA ================= -->
+    <div class="band" id="more">
+      <i class="fa-solid fa-circle-info" aria-hidden="true"></i>
+      <div>
+        <h2 data-i18n="bandMore">More News &amp; Sources</h2>
+        <p data-i18n="bandMoreSub">Other news, where every number comes from, and downloads</p>
+      </div>
+    </div>
+
+    <section class="card" id="news">
+      <div class="card-head">
+        <span class="card-icon blue"><i class="fa-solid fa-newspaper"></i></span>
+        <div>
+          <h3 data-i18n="newsTitle">Latest News &amp; Updates</h3>
+          <p data-i18n="newsSub">Crime, corruption and development</p>
+        </div>
+      </div>
+      <ul class="news-list" id="newsList"></ul>
+    </section>
+
     <section class="card" id="sources">
       <div class="card-head">
         <span class="card-icon teal"><i class="fa-solid fa-database"></i></span>
         <div>
-          <h2 data-i18n="sourcesTitle">Sources &amp; Update Status</h2>
+          <h3 data-i18n="sourcesTitle">Sources &amp; Update Status</h3>
           <p data-i18n="sourcesSub">Where every number comes from</p>
         </div>
       </div>
@@ -347,12 +415,11 @@
         and many crimes are never reported in the news. Treat these counts as indicators, not official totals.</p>
     </section>
 
-    <!-- Open data -->
     <section class="card" id="opendata">
       <div class="card-head">
         <span class="card-icon green"><i class="fa-solid fa-download"></i></span>
         <div>
-          <h2 data-i18n="openTitle">Open Data</h2>
+          <h3 data-i18n="openTitle">Open Data</h3>
           <p data-i18n="openSub">Free to download, check and reuse</p>
         </div>
       </div>
@@ -361,28 +428,16 @@
         <a class="dl" href="data/auto.json" download><i class="fa-solid fa-file-code"></i><span><b data-i18n="dlJsonTitle">Dashboard data (JSON)</b><small data-i18n="dlJsonSub">All numbers shown on this page.</small></span></a>
         <a class="dl" href="https://github.com/niyosh/tnwatch" target="_blank" rel="noopener"><i class="fa-brands fa-github"></i><span><b data-i18n="dlCodeTitle">Source code &amp; method</b><small data-i18n="dlCodeSub">How stories are found, classified and counted.</small></span></a>
       </div>
-      <h3 class="mini" data-i18n="methodTitle">How counting works</h3>
+      <h4 class="mini" data-i18n="methodTitle">How counting works</h4>
       <ul class="method">
         <li data-i18n="method1">Stories are collected every hour from public English and Tamil news feeds.</li>
         <li data-i18n="method2">Headlines are sorted into crime types and districts by keywords.</li>
         <li data-i18n="method3">The same incident covered by several outlets is counted once. English and Tamil stories are matched by type, district and day.</li>
+        <li data-i18n="method7">Court verdicts, appeals and politicians' statements are not counted as new incidents.</li>
         <li data-i18n="method5">Mistakes can be reported with the flag on each story and are fixed by hand.</li>
         <li data-i18n="method6">Inflation is read from MoSPI's official API; state debt and weekly borrowing from RBI publications.</li>
         <li data-i18n="method4">Official yearly crime totals come from NCRB via data.gov.in.</li>
       </ul>
-    </section>
-
-    <!-- Economy (shown only when an official GSDP source is connected) -->
-    <section class="card wide" id="economy" hidden>
-      <div class="card-head">
-        <span class="card-icon purple"><i class="fa-solid fa-chart-column"></i></span>
-        <div>
-          <h2 data-i18n="econTitle">Tamil Nadu GDP &amp; Economy</h2>
-          <p id="economySub">Gross State Domestic Product</p>
-        </div>
-      </div>
-      <div class="chart-box"><canvas id="gdpChart" aria-label="GSDP and growth rate by year" role="img"></canvas></div>
-      <div class="highlights" id="highlights"></div>
     </section>
   </main>
 
@@ -397,7 +452,7 @@
 
   <script defer src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
   <script defer src="data/auto.js"></script>
-  <script defer src="js/i18n.js?v=6"></script>
-  <script defer src="js/app.js?v=6"></script>
+  <script defer src="js/i18n.js?v=7"></script>
+  <script defer src="js/app.js?v=7"></script>
 </body>
 </html>

@@ -78,7 +78,42 @@ CASES += [
     ("corruption", "திமுக மாஜிக்கள் மீதான ஊழல் வழக்குகள்: ஸ்டாலின் மீது தமிழக வெற்றிக் கழகத்தின் ஐடி விங் விமர்சனம்!", None),
     ("corruption", "நாகை: பெண்ணிடம் ரூ.7,500 லஞ்சம் வாங்கிய கிராம நிர்வாக அதிகாரி கைது",
      ("corruption", {"Bribery Cases", "Arrests & Chargesheets"}, "Nagapattinam")),
+    # found in the second week: verdicts, follow-ups, quotes and other states' crimes
+    ("crime", "TN govt appoints three special prosecutors to handle child rape cases against Veeramani", None),
+    ("crime", "ஜெம் வீரமணி போக்சோ வழக்கு: 3 அரசு சிறப்பு வழக்கறிஞர்களை நியமித்த தமிழக அரசு", None),
+    ("crime", "கவின் கொலை வழக்கில் திடீர் திருப்பம்..! தமிழக அரசின் மேல்முறையீடு தள்ளுபடி..! சுப்ரீம் கோர்ட் உத்தரவு.!!", None),
+    ("crime", "கடலூரில் இளைஞர் கொலை வழக்கு: புதுச்சேரியை சேர்ந்தவருக்கு ஆயுள் தண்டனை", None),
+    ("crime", "பெரம்பலூர்: மகளுக்கு பாலியல் தொல்லை; தந்தைக்கு 20 ஆண்டுகள் சிறை", None),
+    ("crime", "DMK looted public money in Periyar's name: CM Vijay", None),
+    ("crime", "தமிழக வரலாறே கண்டிராத ஒரு மாபெரும் அறிவுத் திருட்டு: அமைச்சர் அருண் ராஜ் காட்டம்..!", None),
+    ("crime", "ஆவடி நூலகத்தில் போக்ஸோ குற்றவாளி ஜெம் வீரமணி புத்தகம் இடம்பெற்ற விவகாரம்: நூலக நூல் கொள்முதல் ஊழலில் "
+              "மேலும் ஒரு புதிய அதிர்ச்சி!", ("corruption", set(), "Tiruvallur")),
+    ("crime", "Chennai: SI, constable suspended for taking Rs 10,000 bribe to release stolen bike",
+     ("corruption", {"Bribery Cases", "Officials Suspended"}, "Chennai")),
+    ("crime", "மும்பையில் இருந்து வாங்கி வந்து வேலூரில் சப்ளை: போதை மாத்திரைகள் விற்பனைக்கு வைத்திருந்த 3 பேர் கைது",
+     ("crime", {"Narcotics"}, "Vellore")),
+    ("road", "சவூதி சாலை விபத்து: தமிழக செவிலியர்கள் இருவர் உள்பட ஐவர் உயிரிழப்பு", None),
+    ("crime", "Sivakasi Firecracker Sales Surge Ahead of Diwali, Despite Online Fraud Concerns", None),
+    ("crime", "Karnataka Ethanol Blend Row, Bengaluru Mass Murder, And Tamil Nadu Politics", None),
+    ("crime", "Bengaluru mass murder: Accused identifies wife and mother-in-law's bodies in a forest in Tamil Nadu's Salem",
+     None),
+    ("crime", "Bengaluru family murders: Wife, mother-in-law's bodies recovered in TN; victims' gold ornaments missing", None),
+    ("crime", "Chennai-based animal activist attacked in Karnataka, FIR registered", None),
+    ("crime", "School van driver arrested for sexually assaulting five-year-old girl in Chennai",
+     ("crime", {"Women Safety"}, "Chennai")),
+    ("crime", "Woman murdered in Madurai: Minister orders probe", ("crime", {"Murder"}, "Madurai")),
+    ("crime", "நாகை வேதாரண்யம் மீனவர்கள் மீது இலங்கை கடற்கொள்ளையர்கள் தாக்குதல்.. வலைகளை கொள்ளையடித்து அட்டகாசம்!",
+     ("crime", {"Assault"}, "Nagapattinam")),
+    ("crime", "ஆந்திராவில் இருந்து புதுக்கோட்டைக்கு கஞ்சா கடத்திய 2 பெண்கள் கைது", ("crime", {"Narcotics"}, "Pudukkottai")),
+    ("crime", "Youth beaten up by gang in Tamil Nadu", ("crime", {"Assault"}, None)),
+    ("road", "When Mammootty's Car Hit a 10-Year-Old Boy : V.K. Sreeraman Remembers Ooty Accident", None),
+    ("road", "நாகை: வாகன விபத்தில் உயிரிழந்த காவலருக்கு முதலமைச்சர் நிதியுதவி அறிவிப்பு", None),
+    ("road", "Chennai: Two women killed, 18 injured after van rams into bus", ("road", {"Bus", "Car / Van"}, "Chennai")),
 ]
+# Types a headline must not get
+NOT_TYPES = {
+    "School van driver arrested for sexually assaulting five-year-old girl in Chennai": {"Assault"},
+}
 
 # (headline, deaths, injured) named in road accident headlines
 CASUALTY_CASES = [
@@ -133,9 +168,9 @@ DISTRICT_CASES = [
 ]
 
 
-def story(title, cat, types, district, day="2026-10-26"):
+def story(title, cat, types, district, day="2026-10-26", deaths=0):
     return {"title": title, "cat": cat, "types": types, "district": district, "date": day,
-            "lang": fd.script_lang(title)}
+            "lang": fd.script_lang(title), "deaths": deaths}
 
 
 SAME_STORY_CASES = [
@@ -156,6 +191,17 @@ SAME_STORY_CASES = [
     # same type and district but days apart
     (story("Rowdy hacked to death in Salem", "crime", ["Murder"], "Salem", "2026-10-20"),
      story("சேலத்தில் ரவுடி கொலை", "crime", ["Murder"], "Salem", "2026-10-26"), False),
+    # one crash, datelined Chennai by one outlet and Mamallapuram (Chengalpattu) by another
+    (story("Two women killed, nine injured as van collides with government bus near Mamallapuram", "road",
+           ["Bus", "Car / Van"], "Chengalpattu", "2026-11-06", deaths=2),
+     story("Chennai: Two women killed, 18 injured after van rams into bus", "road", ["Bus", "Car / Van"], "Chennai",
+           "2026-11-06", deaths=2), True),
+    # different death tolls in one district on one day: two crashes
+    (story("Two killed as car hits lorry in Chennai", "road", ["Car / Van", "Lorry / Truck"], "Chennai", deaths=2),
+     story("சென்னையில் கார் விபத்தில் 4 பேர் பலி", "road", ["Car / Van"], "Chennai", deaths=4), False),
+    # ... unless one report is a toll update
+    (story("Bus overturns near Salem, two killed", "road", ["Bus"], "Salem", deaths=2),
+     story("சேலம் பேருந்து விபத்து: பலி எண்ணிக்கை 4 ஆக உயர்வு", "road", ["Bus"], "Salem", deaths=4), True),
 ]
 
 
@@ -176,6 +222,8 @@ def main():
             failures.append(f"{title!r}: expected {cat}/{sorted(need)}/{district}, got {gcat}/{gtypes}/{gdistrict}")
         if "Murder" in gtypes and ("முயற்சி" in title or "attempt" in title.lower()):
             failures.append(f"attempt counted as murder: {title!r}")
+        if NOT_TYPES.get(title, set()) & set(gtypes):
+            failures.append(f"{title!r} should not be {sorted(NOT_TYPES[title] & set(gtypes))}")
     for title, district in DISTRICT_CASES:
         got = fd.find_district(title)
         if got != district:

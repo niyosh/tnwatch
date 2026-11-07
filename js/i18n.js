@@ -57,7 +57,16 @@
     debtTitle: "தமிழ்நாடு அரசின் கடன்",
     debtTrendTitle: "ஆண்டுவாரியான கடன் வளர்ச்சி", debtTrendSub: "மார்ச் இறுதியில் நிலுவைக் கடன் (₹ லட்சம் கோடி)",
     borrowTitle: "இந்த ஆண்டு வாங்கிய கடன்", borrowSub: "RBI நடத்தும் வாராந்திர மாநில அரசுப் பத்திர ஏலங்கள்",
-    footer: "<strong>Tamil Nadu Watch</strong> — பொது ஆதாரங்களை மட்டுமே கொண்டு உருவாக்கப்பட்ட சுயாதீன குடிமக்கள் டாஷ்போர்டு. ஒவ்வொரு செய்தியும் அதன் அசல் வெளியீட்டாளருக்கு இணைக்கப்பட்டுள்ளது."
+    footer: "<strong>Tamil Nadu Watch</strong> — பொது ஆதாரங்களை மட்டுமே கொண்டு உருவாக்கப்பட்ட சுயாதீன குடிமக்கள் டாஷ்போர்டு. ஒவ்வொரு செய்தியும் அதன் அசல் வெளியீட்டாளருக்கு இணைக்கப்பட்டுள்ளது.",
+    navTop: "முக்கியச் செய்திகள்",
+    topTitle: "முக்கியச் செய்திகள்", topSub: "கடந்த இரண்டு நாட்களின் மிக முக்கியமான செய்திகள்",
+    topNote: "எத்தனை ஊடகங்கள் வெளியிட்டன, சம்பவம் எவ்வளவு தீவிரமானது (உயிரிழப்பு, வன்முறைக் குற்றம்), எவ்வளவு சமீபத்தியது என்ற அடிப்படையில் வரிசைப்படுத்தப்பட்டுள்ளது.",
+    bandSafety: "பாதுகாப்பு", bandSafetySub: "செய்திகளில் வந்த குற்றங்களும் சாலை விபத்துகளும் — மாவட்ட வாரியாக",
+    bandLiving: "வாழ்க்கைச் செலவு", bandLivingSub: "தமிழ்நாட்டில் விலைகள் எவ்வளவு வேகமாக உயர்கின்றன — MoSPI தரவு",
+    bandAccount: "ஊழல்", bandAccountSub: "லஞ்ச வழக்குகள், லஞ்ச ஒழிப்புச் சோதனைகள், அதிகாரிகள் மீதான நடவடிக்கைகள்",
+    bandMoney: "அரசின் நிதி", bandMoneySub: "தமிழ்நாடு அரசின் கடனும் புதிதாக வாங்கும் கடனும் — RBI தரவு",
+    bandMore: "மேலும் செய்திகள் & ஆதாரங்கள்", bandMoreSub: "பிற செய்திகள், ஒவ்வொரு எண்ணும் எங்கிருந்து வருகிறது, பதிவிறக்கங்கள்",
+    method7: "நீதிமன்றத் தீர்ப்புகள், மேல்முறையீடுகள், அரசியல்வாதிகளின் அறிக்கைகள் புதிய சம்பவங்களாகக் கணக்கிடப்படுவதில்லை."
   };
   const ATTR_TA = {
     searchPh: "குற்றங்கள், மாவட்டங்கள், அதிகாரிகள், செய்திகளைத் தேடுங்கள்…",
@@ -117,7 +126,8 @@
       raisedLabel: "Raised in {n} auctions since {date}", avgRate: "Average interest rate",
       lastYearSame: "Same period last year", thisYearVs: "This year {p}%", lastYearTotal: "Whole of last year",
       nextAuction: "Next auction", recentAuctions: "Recent auctions",
-      borrowNote: "Market loans only (State Development Loans); amounts accepted at each weekly auction."
+      borrowNote: "Market loans only (State Development Loans); amounts accepted at each weekly auction.",
+      busiestDistricts: "Most crime reports, last 30 days"
     },
     ta: {
       updated: "புதுப்பிக்கப்பட்டது: {date}, {time}",
@@ -169,7 +179,8 @@
       raisedLabel: "{date} முதல் {n} ஏலங்களில் திரட்டப்பட்டது", avgRate: "சராசரி வட்டி விகிதம்",
       lastYearSame: "கடந்த ஆண்டு இதே காலம்", thisYearVs: "இந்த ஆண்டு {p}%", lastYearTotal: "கடந்த முழு ஆண்டு",
       nextAuction: "அடுத்த ஏலம்", recentAuctions: "சமீபத்திய ஏலங்கள்",
-      borrowNote: "சந்தைக் கடன்கள் மட்டும் (மாநில வளர்ச்சிக் கடன்கள்); ஒவ்வொரு வார ஏலத்திலும் ஏற்கப்பட்ட தொகை."
+      borrowNote: "சந்தைக் கடன்கள் மட்டும் (மாநில வளர்ச்சிக் கடன்கள்); ஒவ்வொரு வார ஏலத்திலும் ஏற்கப்பட்ட தொகை.",
+      busiestDistricts: "அதிக குற்றச் செய்திகள் — கடந்த 30 நாட்கள்"
     }
   };
 

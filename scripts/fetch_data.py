@@ -76,18 +76,39 @@ CRIME_ICONS = {
 CRIME_EXCLUDE = re.compile(
     r"\b(?:elephant|leopard|tiger|bear attack|dog attack|stray dog|accident|crash|slams|condemns|flays|lashes out|"
     r"questions|blames|hits out|takes a dig|law and order|law-and-order|special courts|sand mining|sand smuggling|"
-    r"attacks (?:cm|govt|government|centre|dmk|aiadmk|bjp|tvk|congress|stalin|vijay|eps))"
+    r"attacks (?:cm|govt|government|centre|dmk|aiadmk|bjp|tvk|congress|stalin|vijay|eps)|politics|concerns?|"
+    # verdicts come years after the crime; prosecutors and appeals are follow-ups, not new incidents
+    r"sentenced|life imprisonment|life term|rigorous imprisonment|convicted|acquitted|prosecutors?|appeal)"
     r"|யானை|சிறுத்தை|கரடி|காட்டெருமை|தெருநாய்|விபத்த|கண்டனம்|வாக்கு திருட்ட|தாக்கு(?=\s|$|[!.,:'\"’])"
     r"|கேள்வி|பாய்ச்சல்|சாடல்|விமர்சன|முதல்வரே|ஆட்சியில்|ஆட்சி தான்|அரசு மீது|அறிக்கை|பேட்டி|வலியுறுத்த"
     r"|கவனம் செலுத்த|சட்டம்.?ஒழுங்|மவுன|ஏன்(?=\s|\?|$)|கண்டிக்கும்|கண்டித்து|கண்டிக்கிற|குற்றச்சாட்டு"
-    r"|சிறப்பு நீதிமன்றங்கள்|மணல் கொள்ளை",
+    r"|சிறப்பு நீதிமன்றங்கள்|மணல் கொள்ளை|காட்டம|அறிவுத் திருட்டு"
+    r"|ஆயுள் தண்டனை|ஆண்டுகள் சிறை|ஆண்டு சிறை|சிறை தண்டனை|தூக்கு தண்டனை|மரண தண்டனை|தீர்ப்பு|மேல்முறையீடு"
+    r"|சிறப்பு வழக்கறிஞர|வழக்கறிஞர்களை நியமி",
     re.I)
+# A headline that ends by naming a politician is a quote ("DMK looted public money: CM Vijay")
+QUOTE_ATTRIBUTION = re.compile(
+    r":\s*(?:(?:CM|Chief Minister|Deputy CM|Minister|Governor)\s+(?:[A-Z][\w.]*\s?){1,3}"
+    r"|(?:Vijay|Stalin|MK Stalin|EPS|Edappadi Palaniswami|Palaniswami|Annamalai|Seeman|Udhayanidhi(?: Stalin)?"
+    r"|Anbumani(?: Ramadoss)?|Ramadoss|Thirumavalavan|Premalatha(?: Vijayakant)?|Nainar Nagendran|Vaiko))\s*$")
+# Stories set in another state, even when Tamil Nadu is mentioned: a headline led by another state's place
+# ("Bengaluru mass murder: bodies found in TN forest", unless the lead also names a district here), or an
+# attack there ("Chennai-based activist attacked in Karnataka")
+OTHER_STATE_LEAD = re.compile(
+    r"^(?:bengaluru|bangalore|karnataka|kerala|kochi|andhra|hyderabad|telangana|mumbai|delhi|puducherry|pondicherry)"
+    r"\b[^:]{0,40}:|^(?:பெங்களூ|கர்நாடக|கேரள|ஆந்திர|ஹைதராபாத்|புதுச்சேரி|டெல்லி|மும்பை)[^:]{0,40}:", re.I)
+OTHER_STATE_IN = re.compile(
+    r"\b(?:attacked|murdered|killed|hacked|stabbed|robbed|assaulted|raped|molested|kidnapped|abducted|dies|died|injured)"
+    r"\s+(?:\w+\s+){0,3}?in\s+(?:karnataka|kerala|andhra(?: pradesh)?|telangana|bengaluru|bangalore|hyderabad|mumbai|"
+    r"delhi|puducherry|pondicherry|goa|maharashtra)\b", re.I)
+# "Sexually assaulting a child" is a crime against women and children, not a plain assault
+SEXUAL_ASSAULT_RE = re.compile(r"\bsexual(?:ly)? assault\w*", re.I)
 # Incidents abroad are not Tamil Nadu figures, even when the people are from here
 # ("Road accident in Saudi Arabia: 2 from Kumari district die")
 FOREIGN_SCENE = re.compile(
     r"\bin (?:saudi(?: arabia)?|dubai|abu dhabi|the uae|uae|kuwait|oman|qatar|bahrain|malaysia|singapore|sri lanka|"
     r"the us|usa|america|canada|australia|the uk|london|germany)\b"
-    r"|சவுதி|துபாயில்|அபுதாபியில்|குவைத்தில்|ஓமனில்|கத்தாரில்|பஹ்ரைனில்|மலேசியாவில்|சிங்கப்பூரில்|இலங்கையில்"
+    r"|சவுதி|சவூதி|துபாயில்|அபுதாபியில்|குவைத்தில்|ஓமனில்|கத்தாரில்|பஹ்ரைனில்|மலேசியாவில்|சிங்கப்பூரில்|இலங்கையில்"
     r"|அமெரிக்காவில்|கனடாவில்|ஆஸ்திரேலியாவில்|லண்டனில்", re.I)
 # Political speeches that use the word "bribe" are not corruption cases, unless the headline also reports
 # an actual arrest, raid or case ("Ex-minister arrested in bribery case; Stalin hits out" stays)
@@ -100,7 +121,7 @@ ATTEMPT_RE = re.compile(r"\battempt(?:ed)? to murder|\bmurder attempt|\battempte
 NOT_MURDER_RE = re.compile(r"தற்கொலை|கொலை ?மிரட்டல்")
 
 CORRUPTION_GATE = ["bribe", "corruption", "corrupt", "dvac", "vigilance", "disproportionate assets", "anti-corruption",
-                   "லஞ்ச", "ஊழல்", "சொத்துக் குவிப்பு", "சொத்து குவிப்பு", "வருமானத்துக்கு அதிகமாக",
+                   "லஞ்ச", "ஊழல", "சொத்துக் குவிப்பு", "சொத்து குவிப்பு", "வருமானத்துக்கு அதிகமாக",
                    "வருமானத்திற்கு அதிகமாக", "முறைகேடு"]
 CORRUPTION_TYPES = {
     "Bribery Cases": ["bribe", "caught accepting", "trap", "லஞ்சம்", "லஞ்சப்", "கையும் களவுமாக"],
@@ -151,9 +172,11 @@ ROAD_EXCLUDE = re.compile(
     r"\b(?:fire accident|blaze|cracker|firecracker|fireworks|explosion|blast|boiler|electrocut|drown|landslide|"
     r"wall collapse|building collapse|train|rail|flight|plane|helicopter|boat|ship|convoy|workplace|quarry|"
     # statistics, campaigns and enforcement drives are not accidents
-    r"declined|decline in|decreased|increase in|rise in|statistics|awareness|campaign|special drive)"
+    r"declined|decline in|decreased|increase in|rise in|statistics|awareness|campaign|special drive|"
+    # memories of old crashes and later relief payments are not new accidents
+    r"remembers|recalls|anniversary|years ago|ex.?gratia|solatium|compensation|relief)"
     r"|தீ விபத்த|பட்டாசு|வெடி விபத்த|வெடித்து|மின்சாரம் தாக்கி|மின் விபத்த|நீரில் மூழ்கி|ரயில்|விமான|படகு"
-    r"|நிலச்சரிவ|சுவர் இடிந்து|கான்வாய்|விழிப்புணர்வு|குறைந்துள்ள", re.I)
+    r"|நிலச்சரிவ|சுவர் இடிந்து|கான்வாய்|விழிப்புணர்வு|குறைந்துள்ள|நிதியுதவி|நிவாரண|இழப்பீடு", re.I)
 # Roundups that add up several states ("40 killed across MP, Punjab, UP, Tamil Nadu…") are not Tamil Nadu figures
 OTHER_STATES = re.compile(
     r"\b(?:across india|nationwide|across the country|madhya pradesh|mp|punjab|uttar pradesh|up|bengal|kerala|karnataka|"
@@ -323,6 +346,7 @@ def _district_rx(english, tamil):
 
 CRIME_RX = {t: _rx(w) for t, w in CRIME_TYPES.items()}
 CORRUPTION_GATE_RX = _rx(CORRUPTION_GATE)
+CORRUPTION_WORDS_RX = _rx(["bribe", "corruption", "corrupt", "dvac", "anti-corruption", "லஞ்ச", "ஊழல"])
 CORRUPTION_RX = {t: _rx(w) for t, w in CORRUPTION_TYPES.items()}
 DEV_RX = {t: _rx(w) for t, w in DEV_TAGS.items()}
 ROAD_GATE_RX = _rx(ROAD_GATE)
@@ -379,11 +403,19 @@ def find_district(text):
     return best[1] if best else None
 
 
+def other_state(text):
+    lead = OTHER_STATE_LEAD.match(text)
+    return bool(lead and not find_district(lead.group(0))) or bool(OTHER_STATE_IN.search(text))
+
+
 def strip_special(text):
     extra = set()
     if ATTEMPT_RE.search(text):
         extra.add("Assault")
         text = ATTEMPT_RE.sub(" ", text)
+    if SEXUAL_ASSAULT_RE.search(text):
+        extra.add("Women Safety")
+        text = SEXUAL_ASSAULT_RE.sub(" ", text)
     return NOT_MURDER_RE.sub(" ", text), extra
 
 
@@ -396,7 +428,10 @@ def classify(bucket, title):
     if not (district or TN_RE.search(text)):
         return None
     if bucket == "crime":
-        if CRIME_EXCLUDE.search(text) or FOREIGN_SCENE.search(text) or ("?" in text and PARTY_RE.search(text)):
+        if CORRUPTION_WORDS_RX.search(text):
+            return classify("corruption", title)  # a bribe or a scam by officials is counted under corruption
+        if CRIME_EXCLUDE.search(text) or FOREIGN_SCENE.search(text) or other_state(text) \
+                or QUOTE_ATTRIBUTION.search(text) or ("?" in text and PARTY_RE.search(text)):
             return None
         text, extra = strip_special(text)
         types = sorted(extra | {t for t, rx in CRIME_RX.items() if rx.search(text)})
@@ -408,7 +443,8 @@ def classify(bucket, title):
         types = [t for t, rx in CORRUPTION_RX.items() if rx.search(text)]
         return ("corruption", types or ["Other Corruption News"]), district
     if bucket == "road":
-        if ROAD_EXCLUDE.search(text) or FOREIGN_SCENE.search(text) or not ROAD_GATE_RX.search(text):
+        if ROAD_EXCLUDE.search(text) or FOREIGN_SCENE.search(text) or other_state(text) \
+                or not ROAD_GATE_RX.search(text):
             return None
         if not district and OTHER_STATES.search(text):
             return None  # a national or other-state story that mentions Tamil Nadu in passing
@@ -439,6 +475,15 @@ def _day(a):
     return date.fromisoformat(a["date"]).toordinal()
 
 
+# Chennai datelines often cover crashes in its suburbs
+NEAR = {"Chennai": {"Tiruvallur", "Chengalpattu", "Kanchipuram"}}
+TOLL_RE = re.compile(r"\bdeath toll|\btoll (?:rises|climbs)|பலி எண்ணிக்கை", re.I)
+
+
+def near(d1, d2):
+    return bool(d1 and d2) and (d1 == d2 or d2 in NEAR.get(d1, ()) or d1 in NEAR.get(d2, ()))
+
+
 def same_story(a, b, tka=None, tkb=None):
     """True when two stored stories most likely describe the same incident."""
     if a["cat"] != b["cat"]:
@@ -450,6 +495,12 @@ def same_story(a, b, tka=None, tkb=None):
         return True
     # "Other" (no vehicle named) can be the same crash as any typed report of it
     same_type = set(a["types"]) & set(b["types"]) or (a["cat"] == "road" and "Other" in a["types"] + b["types"])
+    if a["cat"] == "road":
+        da, db = a.get("deaths") or 0, b.get("deaths") or 0
+        if da and db and da != db and not (TOLL_RE.search(a["title"]) or TOLL_RE.search(b["title"])):
+            return False  # different death tolls are different crashes, unless one is an update ("toll rises to 4")
+        if not days and da >= 2 and da == db and same_type and near(a["district"], b["district"]):
+            return True  # one crash reported from two datelines ("Chennai: …" and "… near Mamallapuram")
     if days > 1 or not a["district"] or a["district"] != b["district"] or not same_type:
         return False
     if a.get("lang", "en") != b.get("lang", "en"):
