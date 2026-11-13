@@ -1,6 +1,7 @@
 """Draw data/card.png: the preview image shown when the site is shared on WhatsApp, X or Facebook.
 
 Run after fetch_data.py:  python scripts/make_card.py   (needs Pillow: pip install pillow)
+The address printed on the card comes from SITE_URL (the site's own address, set by the hourly job).
 """
 
 import json
@@ -75,7 +76,9 @@ def main():
         g.rectangle([60 + i * bw + 3, 540 - h, 60 + (i + 1) * bw - 3, 540], fill=colour)
     g.text((60, 556), "Crime news reports per day, last 30 days. News reports from public feeds, not official police data.",
            font=font(20), fill=GREY)
-    g.text((60, 588), "niyosh.github.io/tnwatch", font=font(22, True), fill=BLUE)
+    site = os.environ.get("SITE_URL", "").strip().rstrip("/")
+    site = site.split("://", 1)[-1] or "niyosh.github.io/tnwatch"
+    g.text((60, 588), site, font=font(22, True), fill=BLUE)
 
     img.save(os.path.join(DATA, "card.png"), optimize=True)
     print(f"Wrote data/card.png ({updated})")

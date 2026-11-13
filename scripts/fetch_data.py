@@ -847,11 +847,13 @@ def fetch_datagov(history, status):
         entry = {"name": src["name"], "url": src.get("page") or "https://www.data.gov.in/"}
         entries.append(entry)
         if not src.get("resource"):
-            entry.update(status="not configured", detail="Add a data.gov.in resource id in scripts/sources.json")
+            # switched on by adding a data.gov.in resource id to scripts/sources.json; hidden on the page
+            entry.update(status="not configured", detail="Not connected yet")
             continue
         if not key:
             entry.update(status="needs key" if src["id"] not in cache else "cached",
-                         detail="Set DATA_GOV_IN_API_KEY (free at data.gov.in) to refresh")
+                         detail="Official yearly figures, refreshed by hand"
+                         + (f" (last on {cache[src['id']]['fetched']})" if src["id"] in cache else ""))
             continue
         url = (f"https://api.data.gov.in/resource/{src['resource']}?"
                + urllib.parse.urlencode({"api-key": key, "format": "json", "limit": 100}))
@@ -871,8 +873,9 @@ def fetch_datagov(history, status):
         except Exception as e:
             detail = str(e)[:120]
             if "refused" in detail.lower() or "timed out" in detail.lower():
-                # data.gov.in blocks GitHub's servers; scripts/update_official.ps1 fetches from a computer in India
-                detail = "data.gov.in does not accept connections from GitHub's servers; refreshed from a computer in India"
+                # data.gov.in refuses servers outside India; scripts/update_official.ps1 refreshes it from the
+                # owner's computer once a year (NCRB publishes yearly). Visitors see the plain version.
+                detail = "Official yearly figures, refreshed by hand once a year"
                 if src["id"] in cache:
                     detail += f" (last on {cache[src['id']]['fetched']})"
             entry.update(status="error" if src["id"] not in cache else "cached", detail=detail)

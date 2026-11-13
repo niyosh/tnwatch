@@ -77,7 +77,8 @@ To refresh by hand: **Actions → Update data and site → Run workflow**. To pa
 and run **Update data and site** once.
 
 ## Fixing a wrong classification
-Each story has a small flag that opens a pre-filled GitHub issue. To fix it, add a rule to `scripts/corrections.json`
+When `reportEmail` is set in `js/config.js`, each story has a small flag that opens a pre-filled email to that address
+(no flags while it's empty). To fix a reported story, add a rule to `scripts/corrections.json`
 (the file explains the format) — it applies on the next hourly run, also to stories already stored. If a rule in
 `fetch_data.py` is wrong, fix it and add the headline to `scripts/test_classify.py`; the workflow runs those checks before
 every publish, so a broken rule never reaches the site.
@@ -129,6 +130,28 @@ within a few minutes.
 
 Outside scripts and styles (Chart.js, Font Awesome, GoatCounter) are pinned by integrity hash, so a changed CDN file
 can't alter the page. When upgrading one, update its hash.
+
+The page itself doesn't link to GitHub. Correction reports go to `reportEmail` (e.g. `corrections@tnwatch.in`), and
+sources that aren't connected yet are left out of the Sources card.
+
+## Own domain (e.g. tnwatch.in)
+The site keeps being built and hosted by this repository; only its address changes. Everything that prints the address
+(link previews, the share image, the hourly freshness check) reads it from GitHub Pages, so no code change is needed.
+
+1. Buy the domain from any registrar (GoDaddy, Hostinger, BigRock, Namecheap…).
+2. At the registrar's DNS settings, add (and delete any old A/AAAA records on `@`; don't add a wildcard `*` record):
+   - `A` records for `@`: `185.199.108.153`, `185.199.109.153`, `185.199.110.153`, `185.199.111.153`
+   - `AAAA` records for `@`: `2606:50c0:8000::153`, `2606:50c0:8001::153`, `2606:50c0:8002::153`, `2606:50c0:8003::153`
+   - `CNAME` record for `www`: `niyosh.github.io`
+3. Verify the domain against takeover: GitHub profile **Settings → Pages → Add a domain**, then add the `TXT` record it
+   shows (`_github-pages-challenge-niyosh`) at the registrar and press **Verify**. Keep that record.
+4. Repository **Settings → Pages → Custom domain**: enter `tnwatch.in`, **Save**. When the check turns green (DNS can
+   take a few hours), tick **Enforce HTTPS** (up to 24 hours after the domain is added).
+5. Run **Actions → Update data and site → Run workflow** once, so the share image and previews use the new address.
+
+The old `niyosh.github.io/tnwatch` address then redirects to the new one. For a corrections address, turn on the
+registrar's free email forwarding (or a service such as ImprovMX) for `corrections@tnwatch.in` and put it in
+`reportEmail`.
 
 ## Sharing
 Share buttons use the phone's share sheet (WhatsApp, Telegram…) or fall back to WhatsApp. Links keep the reader's view:

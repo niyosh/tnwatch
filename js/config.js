@@ -1,6 +1,5 @@
-/* Site settings that can be changed without touching the rest of the code.
-   Easiest: open this file on github.com, click the pencil (Edit), change a value between the quotes and
-   press "Commit changes". The site updates itself within a few minutes. Keep the quotes and commas. */
+/* Site settings. Change a value between the quotes and save; the site updates itself within a few minutes.
+   Keep the quotes and commas. */
 window.TNW_CONFIG = {
   // Reader support: your UPI ID (for example "yourname@okaxis"). Leave it empty ("") to hide the Support button.
   upiId: "",
@@ -10,5 +9,8 @@ window.TNW_CONFIG = {
   supportUrl: "",
   // Visitor counting: your GoatCounter code, the "tnwatch" in tnwatch.goatcounter.com (free sign-up at goatcounter.com).
   // Leave it empty to switch counting off.
-  goatcounter: ""
+  goatcounter: "",
+  // Where readers' correction reports go (the flag on each story opens an email to it), e.g. "corrections@tnwatch.in".
+  // Leave it empty to hide the flags.
+  reportEmail: ""
 };

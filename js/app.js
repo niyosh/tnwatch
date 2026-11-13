@@ -1,12 +1,11 @@
-/* Renders the home dashboard from window.AUTO_DATA (data/auto.js),
-   which scripts/fetch_data.py rebuilds from public sources every hour. */
+/* Renders the home dashboard from window.AUTO_DATA (data/auto.js), rebuilt from public sources every hour. */
 (function () {
   "use strict";
 
   const D = window.AUTO_DATA;
   if (!D) {
-    document.body.insertAdjacentHTML("afterbegin",
-      '<p style="padding:16px;background:#fde7ea;color:#8e0f22;margin:0">No data yet — run <code>python scripts/fetch_data.py</code>.</p>');
+    document.body.insertAdjacentHTML("afterbegin", `<p style="padding:16px;background:#fde7ea;color:#8e0f22;margin:0">${
+      window.I18N ? window.I18N.t("noData") : "The latest figures are being prepared. Please check again in a few minutes."}</p>`);
     return;
   }
 
@@ -25,8 +24,10 @@
   // Amounts arrive in ₹ crore: "₹9.56 lakh crore" or "₹7,000 crore"
   const fmtCr = (v) => (v >= 1e5 ? `₹${fmtNum(v / 1e5, 2)} ${t("lakhCrore")}` : `₹${fmt(Math.round(v || 0))} ${t("crore")}`);
   const monthLabel = (ym) => { const [y, m] = String(ym).split("-").map(Number); return `${MONTHS[m - 1]} ${y}`; };
-  const REPO = "https://github.com/niyosh/tnwatch";
   const params = new URLSearchParams(location.search);
+  // Site settings (js/config.js): reader support, visit counting and the address for correction reports
+  const CFG = window.TNW_CONFIG || {};
+  const reportEmail = /^[^\s@<>"]+@[^\s@<>"]+\.[a-z]{2,}$/i.test(String(CFG.reportEmail || "").trim()) ? CFG.reportEmail.trim() : "";
 
   /* Arrow + % with colour. upIsGood decides whether a rise is green or red. null = not enough history yet. */
   function change(pct, upIsGood) {
@@ -270,17 +271,16 @@
     const mine = items.filter((a) => storyLang(a) === lang);
     return mine.length >= min ? mine : items;
   };
+  // A pre-filled email to the site's corrections address; no flag until one is set in js/config.js
   function reportLink(a, cat) {
-    const q = new URLSearchParams({
-      title: `Correction: ${a.title}`.slice(0, 120),
-      labels: "correction",
-      body: [`Story: ${a.title}`, `Link: ${a.url}`,
-        `Shown as: ${cat} · ${(a.types || [a.tag]).join(", ")} · ${a.district || "no district"}`,
-        "", "What is wrong?", "", "", "---", "Maintainer: add the fix to scripts/corrections.json"].join("\n")
-    });
-    return `<a class="report" href="${REPO}/issues/new?${esc(q.toString())}" target="_blank" rel="noopener"
-      title="${esc(t("report"))}" aria-label="${esc(t("report"))}"><i class="fa-regular fa-flag"></i></a>`;
+    if (!reportEmail) return "";
+    const subject = `Correction: ${a.title}`.slice(0, 120);
+    const body = [`Story: ${a.title}`, `Link: ${a.url}`,
+      `Shown as: ${cat} · ${(a.types || [a.tag]).join(", ")} · ${a.district || "no district"}`, "", "What is wrong?", ""].join("\n");
+    const href = `mailto:${reportEmail}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+    return `<a class="report" href="${esc(href)}" title="${esc(t("report"))}" aria-label="${esc(t("report"))}"><i class="fa-regular fa-flag"></i></a>`;
   }
+  $("#methodReport").hidden = !reportEmail;
   // the reader's own district gets a pin
   const placeTag = (d) => (d ? `<b${d === mine ? ' class="mine"' : ""}>${d === mine ? '<i class="fa-solid fa-location-dot"></i> ' : ""}`
     + `${esc(term(d))}</b> · ` : "");
@@ -730,7 +730,8 @@
   const STATUS = { ok: ["ok", "fa-circle-check"], partial: ["warn", "fa-triangle-exclamation"], cached: ["warn", "fa-clock-rotate-left"],
     "needs key": ["warn", "fa-key"], "not configured": ["off", "fa-plug-circle-xmark"], error: ["bad", "fa-circle-xmark"] };
   const STATUS_KEY = { ok: "stOk", partial: "stPartial", cached: "stCached", "needs key": "stNeedsKey", "not configured": "stNotConfigured", error: "stError" };
-  $("#sourceList").innerHTML = (D.sources || []).map((s) => {
+  // sources that aren't connected yet are a note for the site owner, not for readers
+  $("#sourceList").innerHTML = (D.sources || []).filter((s) => s.status !== "not configured" && s.status !== "needs key").map((s) => {
     const [cls, icon] = STATUS[s.status] || ["off", "fa-circle"];
     return `<li><i class="fa-solid ${icon} st-${cls}"></i>
       <span><a href="${safeUrl(s.url)}" target="_blank" rel="noopener">${esc(s.name)}</a><small>${esc(s.detail)}</small></span>
@@ -792,7 +793,6 @@
   }
 
   /* ---------- Reader support and visit counting (switched on in js/config.js) ---------- */
-  const CFG = window.TNW_CONFIG || {};
   const upiId = /^[\w.-]{2,256}@[a-z][a-z0-9]{1,63}$/i.test(String(CFG.upiId || "").trim()) ? CFG.upiId.trim() : "";
   const supportUrl = /^https:\/\/\S+$/i.test(String(CFG.supportUrl || "").trim()) ? CFG.supportUrl.trim() : "";
   if (upiId || supportUrl) {

@@ -39,11 +39,15 @@ jobs:
     steps:
       - name: Is an update due?
         id: check
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
           if [ "${{ github.event_name }}" = "push" ] || [ "${{ inputs.mode }}" = "full" ] || [ "${{ inputs.mode }}" = "hourly" ]; then
             echo "run=true" >> "$GITHUB_OUTPUT"; exit 0
           fi
-          age=$(curl -s --max-time 20 "https://niyosh.github.io/tnwatch/data/version.json?t=$(date +%s)" \
+          # the site's own address: github.io, or its custom domain once one is set
+          site=$(gh api "repos/${GITHUB_REPOSITORY}/pages" --jq .html_url 2>/dev/null || echo "https://niyosh.github.io/tnwatch/")
+          age=$(curl -sL --max-time 20 "${site%/}/data/version.json?t=$(date +%s)" \
             | python3 -c "import json, sys, datetime as d; t = d.datetime.fromisoformat(json.load(sys.stdin)['generatedAt']); print(int((d.datetime.now(d.timezone.utc) - t).total_seconds() // 60))" \
             || echo 9999)
           echo "The published data is $age minutes old"
@@ -89,7 +93,13 @@ jobs:
           DATA_GOV_IN_API_KEY: ${{ secrets.DATA_GOV_IN_API_KEY }}
         run: python scripts/fetch_data.py --mode ${{ steps.mode.outputs.mode }}
 
+      # the site's address (github.io, or its custom domain once one is set) for the share image and link previews
+      - id: pages
+        uses: actions/configure-pages@v5
+
       - name: Draw the share image
+        env:
+          SITE_URL: ${{ steps.pages.outputs.base_url }}
         run: |
           pip install --quiet pillow qrcode
           python scripts/make_card.py
@@ -108,16 +118,18 @@ jobs:
           git push -q -f "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" data
 
       - name: Build the site
+        env:
+          SITE_URL: ${{ steps.pages.outputs.base_url }}
         run: |
+          SITE_URL="${SITE_URL:-https://niyosh.github.io/tnwatch}"
           mkdir -p _site/data
           cp -r index.html css js assets _site/
           cp data/auto.js data/auto.json data/version.json data/stories.csv data/card.png _site/data/
-          # previews use the fresh share image; the run id makes apps fetch the new one
-          sed -i "s|assets/og.png|data/card.png?v=${GITHUB_RUN_ID}|g" _site/index.html
+          # previews use the fresh share image at the site's real address; the run id makes apps fetch the new one
+          sed -i -e "s|https://niyosh.github.io/tnwatch/assets/og.png|${SITE_URL}/data/card.png?v=${GITHUB_RUN_ID}|g" \
+                 -e "s|https://niyosh.github.io/tnwatch/|${SITE_URL}/|g" _site/index.html
           # the Support card's UPI QR code, from the UPI ID in js/config.js (none drawn while it's empty)
           python scripts/make_upi_qr.py _site/assets/upi-qr.svg
-
-      - uses: actions/configure-pages@v5
 
       - uses: actions/upload-pages-artifact@v3
         with:
